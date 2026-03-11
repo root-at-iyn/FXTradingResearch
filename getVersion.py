@@ -1,3 +1,3 @@
 import ibapi
 
-print("TWS API version:", ibapi.__version)
+print("TWS API version:", ibapi.__version__)
