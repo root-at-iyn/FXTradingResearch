@@ -30,7 +30,7 @@ def getFXHistoricalData(app: IBClient, fx_contract: Contract):
     time.sleep(1)
     app.reqHistoricalData(
         app.nextId(), 
-        mycontract, 
+        fx_contract, 
         "20260312 17:00:00 US/Eastern", 
         "1 D", 
         "15 mins", 
@@ -52,7 +52,8 @@ def getFXHistoricalData(app: IBClient, fx_contract: Contract):
         app.disconnect()
 
 def getEarliestDataTimestamp(app: IBClient, contract: Contract):
-    return app.reqHeadTimeStamp(app.nextId(), contract, "MIDPOINT", 1, 2)
+    app.reqHeadTimeStamp(app.nextId(), contract, "MIDPOINT", 1, 2)
+    return app.earliest_timestamp
 
 
 if __name__ == '__main__':
