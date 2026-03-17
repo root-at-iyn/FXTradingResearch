@@ -50,7 +50,7 @@ The following features have been selected beacuse they are widely accepted by tr
 ### Average Daily Range (ADR)
 | Data Type | float|
 ------------|------|
-| Definition| The average of daily ranges over the last *n* periods, calculated by $\frac{\sum_{i=x}^{n} i+(i-1)}{n}$|
+| Definition| The average of daily ranges over the last *n* periods, calculated by $\frac{\sum_{i=x1}^{n} i+(i_{-1})}{n}$|
 | Use Case  | |
 
 ### Name
