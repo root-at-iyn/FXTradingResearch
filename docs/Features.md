@@ -30,16 +30,19 @@ Features that have data that results in True or False values, e.g. candlestick p
 Features that contain textual data. Textual data typically requires special preprocessing steps (like tokenization) to transform it into a format suitable for machine learning models. Example textual data from an FX trading perspective could be a Trump post, Federal Reserve or other Central Bank speak, or the details of an NFP release. This would rely on an AI model to analyse the text and return a result of whether the text is considered "bearish" or "bullish".
 
 
-## Selected Features
+# Selected Features
 The following features have been selected beacuse they are widely accepted by traders as factors that can influence price, or metrics used by analysts when forcasting price direction.
 
-<!-- Template -->
+<!-- Template >
 ### Name
 | Data Type | |
 ------------|------|
 | Definition| |
 | Use Case  | |
-<!-- Template End -->
+< Template End -->
+
+## Continuous Features
+These are data points that are continuous in their distribution, meaning there's a data point for each bar on chart timeframe under analysis.
 
 ### Intraday Range (IR)
 | Data Type | float|
@@ -50,20 +53,20 @@ The following features have been selected beacuse they are widely accepted by tr
 ### Average Daily Range (ADR)
 | Data Type | float|
 ------------|------|
-| Definition| The average of daily ranges over the last *n* periods, calculated by $\frac{\sum_{i=1}^{n} x_{i}}{n}$|
-| Use Case  | |
+| Definition| The average daily price range over the last *n* daily periods, calculated by $\frac{\sum_{i=1}^{n} x_{i}}{n}$|
+| Use Case  | Helps to determine if the intraday price movement has moved further or less than average daily range. It can be used in combination with other calculations to determine the probability of the current intraday price moving *x* more pips by the end of the day. |
 
-### Name
-| Data Type | |
+### Simple Moving Average (SMA)
+| Data Type | float|
 ------------|------|
-| Definition| |
-| Use Case  | |
+| Definition| The mean average price over *n* periods ($\frac{\sum_{i=1}^{n} x_{i}}{n}$), where price can be the closing price, high, low, or open. By default this is usually set to the closing price. |
+| Use Case  | SMA is used to help detect if the price is trending. It is also used in Moving Average Cross strategies where two SMA's are used, a longer period and a shorter period. When the shorter period crosses the longer period, it could indicate a change in the trend. |
 
-### Name
-| Data Type | |
+### Relative Strength Index (RSI)
+| Data Type | float|
 ------------|------|
-| Definition| |
-| Use Case  | |
+| Definition| RSI is an overbought/oversold indicator used to measrue price momentum on a scale between 0-100 over *n* periods. It is calculated in two steps: 1. Calculate the relative strength (RS) over *n* periods = $\frac{Avg Gain}{Avg Loss}$, 2. Calculate (RSI) = $$\left[ 100 - \left[ \frac{100}{1 + RS} \right] \right]$$ Values over the upper limit (typically 70) is considered overbought, and values under the lower limit (typically 30) is considered oversold. |
+| Use Case  | RSI is often used to indicate divergences between RSI and the extreme price high/low. For example, is the price is at the lowest point of the day, but RSI is higher than the previous low of point of the day, then this would indicate a bullish divergence in price.|
 
 ### Name
 | Data Type | |
