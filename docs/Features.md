@@ -31,7 +31,7 @@ Features that contain textual data. Textual data typically requires special prep
 
 
 # Selected Features
-The following features have been selected beacuse they are widely accepted by traders as factors that can influence price, or metrics used by analysts when forcasting price direction.
+The following features have been selected beacuse they are widely accepted by traders as factors that can influence decisions to enter or exit positions.
 
 <!-- Template >
 ### Name
@@ -47,7 +47,7 @@ These are data points that are continuous in their distribution, meaning there's
 ### Intraday Range (IR)
 | Data Type | float|
 ------------|------|
-| Definition| The distance between the highest and lowest price of the day, calculated as (High - Low).|
+| Definition| The distance between the highest and lowest price of the day, calculated as (DHigh - DLow).|
 | Use Case  | Can be used to help define other features like the average daily range, or show whether today's range was greater than the previous day's range. Theoretically, an increase in the day's range and a daily close at the high of the range could indicate rising price momentum.|
 
 ### Average Daily Range (ADR)
@@ -71,11 +71,20 @@ These are data points that are continuous in their distribution, meaning there's
 ### Bollinger Bands
 | Data Type | float|
 ------------|------|
-| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods $\frac{\sum_{i=1}^{n} Price_{i}}{n}$, then computing the standard deviation (STD) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum $$\left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$ The Upper Band is calculated by adding the SMA and the STD times its multiplier *k*, which is often 2 by default: SMA(n) + $K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. SMA(n) - $K \times \sigma_n$. |
+| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods $\frac{\sum_{i=1}^{n} Price_{i}}{n}$, then computing the standard deviation (STD) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum $$\left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$ The Upper Band is calculated by adding the SMA and the STD times its multiplier *k*, which is often 2 by default: $SMA(n) + K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. $SMA(n) - K \times \sigma_n$. |
 | Use Case  | Bollinger Bands can be used for a variety of situation, but are mainly used in reversal strategies. For example, when the price Open above the Upper Bollinger Band and Closes at its lows below the Upper Bollinger Bands, this could indicate that price will reverse back down.|
 
-### Name
-| Data Type | |
+## Reference Features
+These are data points that are used as a reference to support or add weight to another feature. For example a shooting star candlestick pattern might have better results when it occurs at yesterday's high (the reference). 
+
+### Day High (DHigh)
+| Data Type | float|
 ------------|------|
-| Definition| |
-| Use Case  | |
+| Definition| The highest price of today's session (24hr period).|
+| Use Case  | Used in IR calculation and can help to determine if prices are trending up, e.g. newer highs are being made but not newer lows.|
+
+### Day Low (DLow)
+| Data Type | float|
+------------|------|
+| Definition| The lowest price of today's session (24hr period).|
+| Use Case  | Used in IR calculation and can help to determine if prices are trending down, e.g. newer lows are being made but not newer highs.|
