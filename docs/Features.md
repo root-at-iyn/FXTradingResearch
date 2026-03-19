@@ -44,6 +44,18 @@ The following features have been selected beacuse they are widely accepted by tr
 ## Continuous Features
 These are data points that are continuous in their distribution, meaning there's a data point for each bar on chart timeframe under analysis.
 
+### Intraday High
+| Data Type | float|
+------------|------|
+| Definition| The highest price in the intraday session.|
+| Use Case  | Used to calculate the intraday range, but can also be used in reversal strategies.|
+
+### Intraday Low
+| Data Type | float|
+------------|------|
+| Definition| The lowest price in the intraday session.|
+| Use Case  | Used to calculate the intraday range, but can also be used in reversal strategies.|
+
 ### Intraday Range (IR)
 | Data Type | float|
 ------------|------|
@@ -65,13 +77,13 @@ These are data points that are continuous in their distribution, meaning there's
 ### Relative Strength Index (RSI)
 | Data Type | float|
 ------------|------|
-| Definition| RSI is an overbought/oversold indicator used to measrue price momentum on a scale between 0-100 over *n* periods. It is calculated in two steps: 1. Calculate the relative strength (RS) over *n* periods = $\frac{Avg Gain}{Avg Loss}$, 2. Calculate (RSI) = $$\left[ 100 - \left[ \frac{100}{1 + RS} \right] \right]$$ Values over the upper limit (typically 70) is considered overbought, and values under the lower limit (typically 30) is considered oversold. |
+| Definition| RSI is an overbought/oversold indicator used to measure price momentum on a scale between 0-100 over *n* periods. It is calculated in two steps: 1. Calculate the relative strength (RS) over *n* periods = $\frac{Avg Gain}{Avg Loss}$, 2. Calculate (RSI) = $$\left[ 100 - \left[ \frac{100}{1 + RS} \right] \right]$$ Values over the upper limit (typically 70) is considered overbought, and values under the lower limit (typically 30) is considered oversold. |
 | Use Case  | RSI is often used to indicate divergences between RSI and the extreme price high/low. For example, is the price is at the lowest point of the day, but RSI is higher than the previous low of point of the day, then this would indicate a bullish divergence in price.|
 
 ### Bollinger Bands
 | Data Type | float|
 ------------|------|
-| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods:<br><br>$\left[\frac{\sum_{i=1}^{n} Price_{i}}{n}\right]$<br><br> then computing the standard deviation (STD) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum:<br><br> $$\left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$<br><br> The Upper Band is calculated by adding the SMA and the STD times its multiplier *k*, which is often 2 by default: $SMA(n) + K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. $SMA(n) - K \times \sigma_n$. |
+| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods:<br><br>$SMA = \left[\frac{\sum_{i=1}^{n} Price_{i}}{n}\right]$<br><br> then computing the standard deviation ($\sigma$) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum:<br><br> $$\sigma = \left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$<br><br> The Upper Band is calculated by adding the SMA and the $\sigma$ times its multiplier *k*, which is often 2 by default: $SMA(n) + K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. $SMA(n) - K \times \sigma_n$. |
 | Use Case  | Bollinger Bands can be used in different scenarios, but are mainly used in reversal strategies. For example, when the price opens above the Upper Bollinger Band and Closes at its lows below the Upper Bollinger Band, this could indicate that the price will fall.|
 
 ## Reference Features
@@ -92,5 +104,47 @@ These are data points that are used as a reference to support or add weight to a
 ### Intraday Signficant Levels (ISigLvl)
 | Data Type | array|
 ------------|------|
-| Definition| An array of significant high and low price points within the trading session. A high or low is significant when the price was the higest or lowest price in an intraday session over *n* periods.|
+| Definition| An array of significant high and low price points within the current day's trading session. A high or low is significant when the price was the higest or lowest price in an intraday session over *n* periods.|
 | Use Case  | The longer a price holds as the high/low of the session, the more likely traders will be using it as a target to take profit, or to enter a new position. The ISigLvls act as intraday support and resistance (S/R) levels, while supporting the concept of S/R polarity (support and resistance can swap roles depending on the price action.)  |
+
+### Monthly Signficant Levels (MSigLvl)
+| Data Type | array|
+------------|------|
+| Definition| An array of significant daily high and low price points within the trading month. A daily high or low is significant when the price was the higest or lowest price in a calendar month over *n* periods.|
+| Use Case  | The longer a price holds as the high/low of the month, the more likely traders will be using it as a target to take profit, or to enter a new position. |
+
+### Intraday Range Percentage (IRP)
+### Name
+| Data Type | float|
+------------|------|
+| Definition| The percentage of how far the price is from the intraday high (Top of today's trading range). Calculated by $\frac{IRHigh - Price}{IR} \times 100$, where *Price* is one of *OHLC*.|
+| Use Case  | Shows what percentage of the days range the current price action is in. This is useful because some candlestick patterns are only valid when appearing at the top of the day's range, or at the bottom of the day's range.|
+
+### Close Percent from Bar High (CPfBH)
+| Data Type | float|
+------------|------|
+| Definition| The percentage of the bar's closing price from the bar's highest price. This is calculated by $\frac{High - Close}{BarRange} \times 100$. A low percentage shows the price closed near the high of the bar.|
+| Use Case  | Used to calculate some candlestick patterns that depend on the closing price being near the high of the candle.|
+
+### Open Percent from Bar Low (OPfBL)
+| Data Type | float|
+------------|------|
+| Definition| The percentage of the bar's opening price from the bar's lowest price. This is calculated by $\frac{Open - Low}{BarRange} \times 100$. A low percentage shows the price opened near the low of the bar.|
+| Use Case  | Used to calculate some candlestick patterns that depend on the opening price being near the low of the candle.|
+
+## Event-based Features
+These are data points where an event occurs at some time (*x*) on the *x* axis at the closing price *y* on the *y* axis. Even with a news event, the closing price is an important factor because it reveals the initial reaction after the event has occured. Candlestick patterns are also only confirmed at the closing price of the candle's interval. There are many candlestick patterns but not all are equal, so I will only add what I think are commonly used and well known patterns. These are more likely to get a reaction when they occur.  
+
+### Shooting Star
+| Data Type | boolean|
+------------|------|
+| Definition| A bearish reversal candlestick pattern that has a wider than average price range but opens and closes at or near its lows. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the open/close price, which is larger than the candle's body.|
+| Use Case  | Used in reversal strategies as a signal short sell opporunity.|
+
+<!-- 
+### Hammer
+| Data Type | |
+------------|------|
+| Definition| |
+| Use Case  | |
+ -->
