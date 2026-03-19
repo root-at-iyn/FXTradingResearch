@@ -71,8 +71,8 @@ These are data points that are continuous in their distribution, meaning there's
 ### Bollinger Bands
 | Data Type | float|
 ------------|------|
-| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods $\frac{\sum_{i=1}^{n} Price_{i}}{n}$, then computing the standard deviation (STD) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum $$\left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$ The Upper Band is calculated by adding the SMA and the STD times its multiplier *k*, which is often 2 by default: $SMA(n) + K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. $SMA(n) - K \times \sigma_n$. |
-| Use Case  | Bollinger Bands can be used for a variety of situation, but are mainly used in reversal strategies. For example, when the price Open above the Upper Bollinger Band and Closes at its lows below the Upper Bollinger Bands, this could indicate that price will reverse back down.|
+| Definition| Bollinger bands measure the volatility of price by computing *n* standard deviations above and below the SMA. The calculation works by first computing the SMA over *n* periods:<br><br>$\left[\frac{\sum_{i=1}^{n} Price_{i}}{n}\right]$<br><br> then computing the standard deviation (STD) over *n* periods. This is done by summing the result of subtracting the SMA from the each price period *i* and squaring it, then dividing the sum of squares by *n*, and taking the square root of the sum:<br><br> $$\left[ \sqrt{\frac{\sum_{i=1}^{n} (Price_i - SMA)^2}{n}} \right]$$<br><br> The Upper Band is calculated by adding the SMA and the STD times its multiplier *k*, which is often 2 by default: $SMA(n) + K \times \sigma_n$. For the Lower Band the same equation is used but this time subtracting i.e. $SMA(n) - K \times \sigma_n$. |
+| Use Case  | Bollinger Bands can be used in different scenarios, but are mainly used in reversal strategies. For example, when the price opens above the Upper Bollinger Band and Closes at its lows below the Upper Bollinger Band, this could indicate that the price will fall.|
 
 ## Reference Features
 These are data points that are used as a reference to support or add weight to another feature. For example a shooting star candlestick pattern might have better results when it occurs at yesterday's high (the reference). 
@@ -88,3 +88,9 @@ These are data points that are used as a reference to support or add weight to a
 ------------|------|
 | Definition| The lowest price of today's session (24hr period).|
 | Use Case  | Used in IR calculation and can help to determine if prices are trending down, e.g. newer lows are being made but not newer highs.|
+
+### Intraday Signficant Levels (ISigLvl)
+| Data Type | array|
+------------|------|
+| Definition| An array of significant high and low price points within the trading session. A high or low is significant when the price was the higest or lowest price in an intraday session over *n* periods.|
+| Use Case  | The longer a price holds as the high/low of the session, the more likely traders will be using it as a target to take profit, or to enter a new position. The ISigLvls act as intraday support and resistance (S/R) levels, while supporting the concept of S/R polarity (support and resistance can swap roles depending on the price action.)  |
