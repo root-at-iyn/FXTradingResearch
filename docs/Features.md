@@ -44,6 +44,12 @@ The following features have been selected beacuse they are widely accepted by tr
 ## Continuous Features
 These are data points that are continuous in their distribution, meaning there's a data point for each bar on chart timeframe under analysis.
 
+### Body
+| Data Type | float|
+------------|------|
+| Definition| The range between the open and close price, calculated by: $abs(close - open)$|
+| Use Case  | Used to determine the strength of price movement within a single bar. If a candle's body is larger than it's *wicks* (i.e. price extremes), it indicates the price moved in a given direction and maintained that direction for the duration of the bar's interval. This can be used in calculating candlstick patterns like the `shooting star`, where the *body* should be smaller than the price extreme (i.e. $high - open$ when the close is lower than the open price.)|
+
 ### Intraday High
 | Data Type | float|
 ------------|------|
@@ -138,13 +144,11 @@ These are data points where an event occurs at some time (*x*) on the *x* axis a
 ### Shooting Star
 | Data Type | boolean|
 ------------|------|
-| Definition| A bearish reversal candlestick pattern that has a wider than average price range but opens and closes at or near its lows. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the open/close price, which is larger than the candle's body.|
-| Use Case  | Used in reversal strategies as a signal short sell opporunity.|
+| Definition| A bearish reversal candlestick pattern that has a wider than average price range with the open near the close, and close at or near its low. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the top of the candle's body, which is also larger than the candle's body. The top of the candle's body is the open when the bar is negative, and the close when the bar is positive.|
+| Use Case  | Used in reversal strategies to signal a sell opportunity.|
 
-<!-- 
 ### Hammer
-| Data Type | |
+| Data Type | boolean|
 ------------|------|
-| Definition| |
-| Use Case  | |
- -->
+| Definition| A bullish reversal candlestick pattern that has a wider than average price range with the close near the open, and close at or near it's high. The pattern creates a distinctive looking *wick* because of the wide price range between the low and the bottom of the candle's body, which is also larger than the candle's body.|
+| Use Case  | Used in reversal strategies to signal a buy opportunity.|
