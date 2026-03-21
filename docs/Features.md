@@ -1,7 +1,7 @@
 # Feature Engineering
 
 ## Overview
-The FX data from a broker includes basic price data such as the open, high, low, close, volume (OHLCV), volume weighted average price (VWAP), and the number of trades transacted (BarCount). By itself, this presents a limited view of price action without considering other factors market participants evaluate when making a buy or sell decision. Without further information it will be difficult to see price patterns and infer whether looking back at the last *n* time intervals tells us anything meaningful about price behaviour or future directional movement. To properly explore price behaviour we need to transform the raw price data into a dataset that includes other data points relevant to our model. This will help to improve it's predictive accuracy. The process of transforming the data is called Feature Engineering. 
+The FX data from a broker includes basic price data such as the open, high, low, close, volume (OHLCV), weighted average price (WAP), and the number of trades transacted (BarCount). By itself, this presents a limited view of price action without considering other factors market participants evaluate when making a buy or sell decision. Without further information it will be difficult to see price patterns and infer whether looking back at the last *n* time intervals tells us anything meaningful about price behaviour or future directional movement. To properly explore price behaviour we need to transform the raw price data into a dataset that includes other data points relevant to our model. This will help to improve it's predictive accuracy. The process of transforming the data is called Feature Engineering. 
 
 A feature is a another data point (i.e. *variable*) that relates to the dependable variable *(e.g. price)* under exploration. A feature enhances the dataset by adding contributing factors that can improve the understanding and accuracy of the model. The types of trading related factors in the context of FX analysis may include but are not limited to:
 
@@ -36,7 +36,7 @@ The following features have been selected beacuse they are widely accepted by tr
 <!-- Template >
 ### Name
 | Data Type | |
-------------|------|
+|-----------|------|
 | Definition| |
 | Use Case  | |
 < Template End -->
@@ -46,9 +46,27 @@ These are data points that are continuous in their distribution, meaning there's
 
 ### Body
 | Data Type | float|
-------------|------|
+-----------|------|
 | Definition| The range between the open and close price, calculated by: $abs(close - open)$|
 | Use Case  | Used to determine the strength of price movement within a single bar. If a candle's body is larger than it's *wicks* (i.e. price extremes), it indicates the price moved in a given direction and maintained that direction for the duration of the bar's interval. This can be used in calculating candlstick patterns like the `shooting star`, where the *body* should be smaller than the price extreme (i.e. $high - open$ when the close is lower than the open price.)|
+
+### Range
+| Data Type | float|
+|-----------|------|
+| Definition| The difference between the highest and lowest price of the interval, calculated as $high - low$.|
+| Use Case  | Can reveal an increase in price volatility when the range is larger than its average or larger than the previous *n* intervals. Can also be used in calculations to define some candlestick patterns.|
+
+### Upper Wick
+| Data Type | float|
+|-----------|------|
+| Definition| The price range between the highest price and the top of the *body*. The top of the body is close price when the bar is positive, and the open price when the bar is negative.|
+| Use Case  | Used in calculations to define some candlestick patterns.|
+
+### Lower Wick
+| Data Type | float|
+|-----------|------|
+| Definition| The price range between the lowest price and the bottom of the *body*. The bottom of the body is open price when the bar is positive, and the close price when the bar is negative.|
+| Use Case  | Used in calculations to define some candlestick patterns.|
 
 ### Intraday High
 | Data Type | float|

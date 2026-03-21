@@ -42,3 +42,17 @@ class Candle():
             wick = df["Open"] - df["Low"]
         
         return wick
+
+class Clean():
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def datetime(df: DataFrame) -> Series:
+        """Split the ISO format date string into separate date and time columns
+        """
+        df["Time"] = df.apply(lambda x: x["Date"].rsplit("T")[1], axis=1)
+        df["Date"] = df.apply(lambda x: x["Date"].rsplit("T")[0], axis=1)
+        time = df.pop("Time")
+        df.insert(1,"Time", time)
+        return 
