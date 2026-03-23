@@ -1,4 +1,5 @@
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series, to_datetime
+from datetime import datetime, time
 
 class Candle():
     """
@@ -43,16 +44,31 @@ class Candle():
         
         return wick
 
-class Clean():
+class Intraday():
     def __init__(self) -> None:
-        pass
+        self.index_count = 0
 
-    @staticmethod
-    def datetime(df: DataFrame) -> Series:
-        """Split the ISO format date string into separate date and time columns
+    def index(self, df: Series, hr=17, min=15):
+        """Returns the intraday index
+
+        Takes in a DatetimeIndexed Series and specified time to set as the 
+        start of the trading session, given by `hr` (hour) and `min` (minutes).
+        The default is 17:15, which is the start of the FX trading session in
+        IBKR (US/Eastern). 
+        Returns the intraday index relative to the start of the trading session
         """
-        df["Time"] = df.apply(lambda x: x["Date"].rsplit("T")[1], axis=1)
-        df["Date"] = df.apply(lambda x: x["Date"].rsplit("T")[0], axis=1)
-        time = df.pop("Time")
-        df.insert(1,"Time", time)
-        return 
+
+        # access row of series with row.name
+        idx_time = to_datetime(df.name).time()
+        roll = time(hour=hr,minute=min)
+        if idx_time == roll:
+            self.index_count = 0
+        else:
+            self.index_count += 1
+        return self.index_count
+
+    def high(df: DataFrame):
+        """Returns the high of the intraday session"""
+        
+        pass    
+    
