@@ -5,7 +5,7 @@ class Candle():
     """
     Class to return the properties of a time period derived from the OHLC
 
-    Takes a Pandas DataFrame of `OHLC` data, and returns the calculated 
+    Takes a Pandas Series of `OHLC` data, and returns the calculated 
     properties of the period (represented as candlestick on the chart). 
     This is designed to work with the pandas.apply() method and should set 
     `axis=1` to receive a series and apply to the column.
@@ -14,17 +14,17 @@ class Candle():
     def __init__(self) -> None:
         pass 
 
-    def body(self, df: DataFrame) -> Series:
+    def body(self, df: Series) -> Series:
         """Returns the body of the candlestick"""
 
         return abs(df["Open"] - df["Close"])
     
-    def range(self, df:DataFrame) -> Series:
+    def range(self, df:Series) -> Series:
         """Returns the range of the candlestick"""
 
         return (df["High"] - df["Low"])
     
-    def upper_wick(self, df: DataFrame) -> Series:
+    def upper_wick(self, df: Series) -> Series:
         """Returns the upper wick of the candlestick"""
 
         if df["Close"] >= df["Open"]:
@@ -34,7 +34,7 @@ class Candle():
         
         return wick
     
-    def lower_wick(self, df: DataFrame) -> Series:
+    def lower_wick(self, df: Series) -> Series:
         """Returns the lower wick of the candlestick"""
 
         if df["Close"] <= df["Open"]:
@@ -47,6 +47,8 @@ class Candle():
 class Intraday():
     def __init__(self) -> None:
         self.index_count = 0
+        self.dhigh = 0
+        self.dlow = 0
 
     def index(self, df: Series, hr=17, min=15):
         """Returns the intraday index
@@ -67,8 +69,49 @@ class Intraday():
             self.index_count += 1
         return self.index_count
 
-    def high(df: DataFrame):
+    def high(self, df: Series):
         """Returns the high of the intraday session"""
         
-        pass    
+        if df["Iday_Idx"] == 0:
+            self.dhigh = df["High"]
+        elif df["High"] > self.dhigh:
+            self.dhigh = df["High"]
     
+        return self.dhigh
+        
+    def low(self, df: Series):
+        """Returns the low of the intraday session"""
+        
+        if df["Iday_Idx"] == 0:
+            self.dlow = df["Low"]
+        elif df["Low"] < self.dlow:
+            self.dlow = df["Low"]
+    
+        return self.dlow
+    
+    def range(self, df: Series):
+        """Returns the range of the intrday session"""
+        return df["Iday_High"] - df["Iday_Low"]
+    
+class Indicator():
+    def __init__(self) -> None:
+        self.h = None
+        self.yday_high = None
+        self.l = None 
+        self.yday_low = None
+
+    def yesterday_high(self, df: Series):
+        """Return the high of yesterday's session"""
+        if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
+            self.yday_high = self.h
+        self.h = df["Iday_High"]
+
+        return self.yday_high
+
+    def yesterday_low(self, df: Series):
+        """Return the low of yesterday's session"""
+        if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
+            self.yday_low = self.l
+        self.l = df["Iday_Low"]
+
+        return self.yday_low
