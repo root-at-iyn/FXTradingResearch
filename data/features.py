@@ -91,6 +91,7 @@ class Intraday():
     
     def range(self, df: Series):
         """Returns the range of the intrday session"""
+        
         return df["Iday_High"] - df["Iday_Low"]
     
 class Indicator():
@@ -99,9 +100,12 @@ class Indicator():
         self.yday_high = None
         self.l = None 
         self.yday_low = None
+        self.daily_range = []
+        self.adr = None
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
+        
         if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
             self.yday_high = self.h
         self.h = df["Iday_High"]
@@ -110,8 +114,25 @@ class Indicator():
 
     def yesterday_low(self, df: Series):
         """Return the low of yesterday's session"""
+        
         if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
             self.yday_low = self.l
         self.l = df["Iday_Low"]
 
         return self.yday_low
+    
+    def ADR(self, df: Series, period: int):
+        """Returns the average daily range for `period` trading sessions"""
+        
+        if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
+            self.daily_range.append(df["Yday_High"] - df["Yday_Low"])
+            if len(self.daily_range) > period:
+                avg = Series(self.daily_range).rolling(period).mean().round(6)
+                self.adr = avg.iloc[-1]
+        
+        return self.adr
+    
+    def SMA(self, df: Series, n: int):
+        "Return the Simple Moving Average of Close prices over `n` periods"
+        
+        pass

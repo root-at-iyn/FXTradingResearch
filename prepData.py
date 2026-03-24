@@ -34,7 +34,9 @@ if __name__ == '__main__':
     indicator = Indicator()
     data["Yday_High"] = data.apply(indicator.yesterday_high, axis=1)
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
+    data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
+    
     
     # show data
-    #print(data['2026-03-08 17:15':'2026-03-09 17:45'])
-    print(data.iloc[93:192])
+    print(data['2026-02-08 17:15':'2026-03-09 17:45'])
+    
