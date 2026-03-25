@@ -1,5 +1,6 @@
 from pandas import DataFrame, Series, to_datetime
 from datetime import datetime, time
+from math import sqrt
 
 class Candle():
     """
@@ -102,6 +103,8 @@ class Indicator():
         self.yday_low = None
         self.daily_range = []
         self.adr = None
+        self.closes = []
+        self.squared_deviations_close = []
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -135,4 +138,35 @@ class Indicator():
     def SMA(self, df: Series, n: int):
         "Return the Simple Moving Average of Close prices over `n` periods"
         
-        pass
+        self.closes.append(df["Close"])
+        if len(self.closes) > n:
+            return sum(self.closes[-n:])/n
+        
+    def sma_standard_deviation(self, df: Series, n: int):
+        """Return the Standard Deviation of the last `n` SMA periods"""
+        if len(self.closes) > n:
+            square_dev = [(x - df["SMA16"])**2 for x in self.closes[-n:]]
+            variance = sum(square_dev)/n
+            standard_dev = sqrt(variance)
+
+        return standard_dev
+    
+    def bollinger_band_upper(
+            self, df: Series, k: int, sma_col_name: str, n: int = 16
+            ):
+        """
+        Return the Bollinger Upper-Band value to `k` standard 
+        deviations for the last `n` SMA periods
+        """
+
+        return df[sma_col_name] + self.sma_standard_deviation(df, n) * k
+    
+    def bollinger_band_lower(
+            self, df: Series, k: int, sma_col_name: str, n: int = 16
+            ):
+        """
+        Return the Bollinger Lower-Band value to `k` standard 
+        deviations for the last `n` SMA periods
+        """
+
+        return df[sma_col_name] - self.sma_standard_deviation(df, n) * k

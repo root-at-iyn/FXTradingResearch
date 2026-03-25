@@ -35,8 +35,19 @@ if __name__ == '__main__':
     data["Yday_High"] = data.apply(indicator.yesterday_high, axis=1)
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
-    
+    data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16])
+    data["BB_Upper_16_2"] = data.apply(
+        indicator.bollinger_band_upper, 
+        axis=1, 
+        args=[2, "SMA16"]
+        )
+    data["BB_Lower_16_2"] = data.apply(
+        indicator.bollinger_band_lower, 
+        axis=1, 
+        args=[2, "SMA16"]
+        )
     
     # show data
-    print(data['2026-02-08 17:15':'2026-03-09 17:45'])
+    print(data['2026-02-08 17:15':'2026-03-09 16:45'])
+    #print(data)
     
