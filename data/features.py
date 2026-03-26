@@ -1,5 +1,5 @@
-from pandas import DataFrame, Series, to_datetime
-from datetime import datetime, time
+from pandas import Series, to_datetime
+from datetime import time
 from math import sqrt
 
 class Candle():
@@ -44,6 +44,24 @@ class Candle():
             wick = df["Open"] - df["Low"]
         
         return wick
+
+    def close_pct_high(self, df: Series):
+        """Return the percentage of the candle's Close from the High"""
+
+        if df["Range"] == 0:
+            return df["Range"]
+        else:
+            return (df["High"] - df["Close"]) / df["Range"]
+
+    def open_pct_high(self, df: Series):
+        """Return the percentage of the candle's Open from the High"""
+
+        if df["Range"] == 0:
+            return df["Range"]
+        else:
+            return (df["High"] - df["Open"]) / df["Range"]
+
+ 
 
 class Intraday():
     def __init__(self) -> None:
@@ -94,6 +112,22 @@ class Intraday():
         """Returns the range of the intrday session"""
         
         return df["Iday_High"] - df["Iday_Low"]
+
+    def close_pct_iday_high(self, df: Series):
+        """Return the percentage of the Close from the Intraday High"""
+
+        if df["Iday_Range"] == 0:
+            return df["Iday_Range"]
+        else:
+            return (df["Iday_High"] - df["Close"]) / df["Iday_Range"]
+
+    def open_pct_iday_high(self, df: Series):
+        """Return the percentage of the Open from the Intraday High"""
+
+        if df["Iday_Range"] == 0:
+            return df["Iday_Range"]
+        else:
+            return (df["Iday_High"] - df["Open"]) / df["Iday_Range"]
     
 class Indicator():
     def __init__(self) -> None:
@@ -104,7 +138,7 @@ class Indicator():
         self.daily_range = []
         self.adr = None
         self.closes = []
-        self.squared_deviations_close = []
+        self.day_idx = 0
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -135,6 +169,13 @@ class Indicator():
         
         return self.adr
     
+    def day_index(self, df: Series, roll: time = time(hour=17,minute=00)):
+        """Return the day count based on days starting at the FX rollover"""
+        
+        if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
+            self.day_idx += 1
+        return self.day_idx
+    
     def SMA(self, df: Series, n: int):
         "Return the Simple Moving Average of Close prices over `n` periods"
         
@@ -142,10 +183,10 @@ class Indicator():
         if len(self.closes) > n:
             return sum(self.closes[-n:])/n
         
-    def sma_standard_deviation(self, df: Series, n: int):
+    def sma_standard_deviation(self, df: Series, sma_col_name: str, n: int):
         """Return the Standard Deviation of the last `n` SMA periods"""
         if len(self.closes) > n:
-            square_dev = [(x - df["SMA16"])**2 for x in self.closes[-n:]]
+            square_dev = [(x - df[sma_col_name])**2 for x in self.closes[-n:]]
             variance = sum(square_dev)/n
             standard_dev = sqrt(variance)
 
@@ -159,7 +200,8 @@ class Indicator():
         deviations for the last `n` SMA periods
         """
 
-        return df[sma_col_name] + self.sma_standard_deviation(df, n) * k
+        return df[sma_col_name] + self.sma_standard_deviation(
+            df, sma_col_name, n) * k
     
     def bollinger_band_lower(
             self, df: Series, k: int, sma_col_name: str, n: int = 16
@@ -169,4 +211,5 @@ class Indicator():
         deviations for the last `n` SMA periods
         """
 
-        return df[sma_col_name] - self.sma_standard_deviation(df, n) * k
+        return df[sma_col_name] - self.sma_standard_deviation(
+            df, sma_col_name, n) * k
