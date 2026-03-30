@@ -51,13 +51,15 @@ if __name__ == '__main__':
         axis=1, 
         args=[2, "SMA16"]
         )
+    data["RSI"] = data.apply((indicator.rsi), axis=1)
     
     # show data
+    print(data)
     #print(data['2026-02-08 17:15':'2026-03-09 16:45'])
-    print(data[[
-        "Open", "High", "Close", "Low", "Range",
-        "Close_%High","Open_%High",
-        "Iday_High","Iday_Low","Iday_Range", 
-        "Close_%DHigh", "Open_%DHigh"
-        ]])
+    # print(data[[
+    #     "Open", "High", "Close", "Low", "Range",
+    #     "Close_%High","Open_%High",
+    #     "Iday_High","Iday_Low","Iday_Range", 
+    #     "Close_%DHigh", "Open_%DHigh"
+    #     ]])
     

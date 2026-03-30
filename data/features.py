@@ -61,7 +61,6 @@ class Candle():
         else:
             return (df["High"] - df["Open"]) / df["Range"]
 
- 
 
 class Intraday():
     def __init__(self) -> None:
@@ -128,7 +127,8 @@ class Intraday():
             return df["Iday_Range"]
         else:
             return (df["Iday_High"] - df["Open"]) / df["Iday_Range"]
-    
+
+
 class Indicator():
     def __init__(self) -> None:
         self.h = None
@@ -139,6 +139,12 @@ class Indicator():
         self.adr = None
         self.closes = []
         self.day_idx = 0
+        self.sma_std_closes = []
+        self.gain = []
+        self.loss = []
+        self.average_gain = []
+        self.average_loss = []
+        self.rs = None
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -160,7 +166,7 @@ class Indicator():
     
     def ADR(self, df: Series, period: int):
         """Returns the average daily range for `period` trading sessions"""
-        
+
         if int(df["Iday_Idx"]) == 0 and int(df["Idx"]) > 0:
             self.daily_range.append(df["Yday_High"] - df["Yday_Low"])
             if len(self.daily_range) > period:
@@ -185,12 +191,13 @@ class Indicator():
         
     def sma_standard_deviation(self, df: Series, sma_col_name: str, n: int):
         """Return the Standard Deviation of the last `n` SMA periods"""
-        if len(self.closes) > n:
-            square_dev = [(x - df[sma_col_name])**2 for x in self.closes[-n:]]
+
+        self.sma_std_closes.append(df["Close"])
+        if len(self.sma_std_closes) > n:
+            square_dev = [(x - df[sma_col_name])**2 for x in self.sma_std_closes[-n:]]
             variance = sum(square_dev)/n
             standard_dev = sqrt(variance)
-
-        return standard_dev
+            return standard_dev
     
     def bollinger_band_upper(
             self, df: Series, k: int, sma_col_name: str, n: int = 16
@@ -199,10 +206,10 @@ class Indicator():
         Return the Bollinger Upper-Band value to `k` standard 
         deviations for the last `n` SMA periods
         """
+        std = self.sma_standard_deviation(df, sma_col_name, n)
+        if std is not None:
+            return df[sma_col_name] + std * k
 
-        return df[sma_col_name] + self.sma_standard_deviation(
-            df, sma_col_name, n) * k
-    
     def bollinger_band_lower(
             self, df: Series, k: int, sma_col_name: str, n: int = 16
             ):
@@ -211,5 +218,33 @@ class Indicator():
         deviations for the last `n` SMA periods
         """
 
-        return df[sma_col_name] - self.sma_standard_deviation(
-            df, sma_col_name, n) * k
+        std = self.sma_standard_deviation(df, sma_col_name, n)
+        if std is not None:
+            return df[sma_col_name] - std * k
+
+    def rsi(self, df: Series, period: int = 16):
+        """
+        Returns the Relative Strength Index (RSI)
+        """
+
+        idx = int(df["Idx"])
+        change = df["Close"] - self.closes[idx-1]
+        self.gain.append(change if change > 0 else 0)
+        self.loss.append(abs(change) if change < 0 else 0)
+        # Calc Average Gain/Loss
+        self.average_gain.append(sum(self.gain[-period:]) / period)
+        self.average_loss.append(sum(self.loss[-period:]) / period)
+        
+        # First RSI value
+        if len(self.gain) == period:
+            self.rs = self.average_gain[-1] / self.average_loss[-1]
+            rsi = 100 - (100/(1+self.rs))
+            return rsi
+        
+        # RSI Smoothing
+        elif len(self.gain) > period:
+            smoothed_avg_gain = (self.average_gain[-2] * period-1) + self.gain[-1]
+            smoothed_avg_loss = (self.average_loss[-2] * period-1) + self.loss[-1]
+            self.rs = smoothed_avg_gain / smoothed_avg_loss
+            rsi = rsi = 100 - (100/(1+self.rs))
+            return rsi
