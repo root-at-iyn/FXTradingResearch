@@ -139,7 +139,6 @@ class Indicator():
         self.adr = None
         self.closes = []
         self.day_idx = 0
-        self.sma_std_closes = []
         self.gain = []
         self.loss = []
         self.average_gain = []
@@ -192,12 +191,11 @@ class Indicator():
     def sma_standard_deviation(self, df: Series, sma_col_name: str, n: int):
         """Return the Standard Deviation of the last `n` SMA periods"""
 
-        self.sma_std_closes.append(df["Close"])
-        if len(self.sma_std_closes) > n:
-            square_dev = [(x - df[sma_col_name])**2 for x in self.sma_std_closes[-n:]]
-            variance = sum(square_dev)/n
-            standard_dev = sqrt(variance)
-            return standard_dev
+        idx = int(df["Idx"])
+        square_dev = [(x - df[sma_col_name])**2 for x in self.closes[((idx+1)-n):idx+1]]
+        variance = sum(square_dev)/n
+        standard_dev = sqrt(variance)
+        return standard_dev
     
     def bollinger_band_upper(
             self, df: Series, k: int, sma_col_name: str, n: int = 16
