@@ -145,7 +145,7 @@ class Indicator():
         self.average_loss = []
         self.rs = None
         self.sig_high = set()
-        self.sig_high = set()
+        self.sig_low = set()
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -255,7 +255,8 @@ class Indicator():
     def significant_high(
             self, 
             df: Series, 
-            iday_high: Series, 
+            iday_high: Series,
+            day_idx: Series, 
             period: int = 8
             ):
         """
@@ -265,15 +266,48 @@ class Indicator():
         idx = int(df["Idx"])
         idh = iday_high.round(4)
         
-        # Reset intraday high if index is zero
+        # Reset significant intraday highs every trading day
         if df["Iday_Idx"] == 0:
             self.sig_high = set()
 
         if idx >= period:
             if round(df["Iday_High"],4) in self.sig_high:
                 return df["Iday_High"]
-            elif idh.iloc[idx] == idh.iloc[idx - period]:
+            # Check if the Iday High has been the same for `period`
+            # Check if the High Low was created in this session
+            elif idh.iloc[idx] == idh.iloc[idx - period] \
+                and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
                 self.sig_high.add(idh.iloc[idx])
                 return df["Iday_High"]
+            else:
+                return None
+
+    def significant_low(
+            self, 
+            df: Series, 
+            iday_low: Series,
+            day_idx: Series, 
+            period: int = 8
+            ):
+        """
+        Return if the Iday_Low is significant in today's session
+        """
+
+        idx = int(df["Idx"])
+        idl = iday_low.round(4)
+        
+        # Reset significant intraday lows every trading day
+        if int(df["Iday_Idx"]) == 0:
+            self.sig_low = set()
+
+        if idx >= period:
+            if round(df["Iday_Low"],4) in self.sig_low:
+                return df["Iday_Low"]
+            # Check if the Iday Low has been the same for `period`
+            # Check if the Iday Low was created in this session
+            elif idl.iloc[idx] == idl.iloc[idx - period] \
+                and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
+                self.sig_low.add(idl.iloc[idx])
+                return df["Iday_Low"]
             else:
                 return None
