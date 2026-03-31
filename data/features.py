@@ -144,6 +144,8 @@ class Indicator():
         self.average_gain = []
         self.average_loss = []
         self.rs = None
+        self.sig_high = set()
+        self.sig_high = set()
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -192,7 +194,7 @@ class Indicator():
         """Return the Standard Deviation of the last `n` SMA periods"""
 
         idx = int(df["Idx"])
-        square_dev = [(x - df[sma_col_name])**2 for x in self.closes[((idx+1)-n):idx+1]]
+        square_dev = [(x - df[sma_col_name])**2 for x in self.closes[((idx-n+1)):idx+1]]
         variance = sum(square_dev)/n
         standard_dev = sqrt(variance)
         return standard_dev
@@ -226,23 +228,52 @@ class Indicator():
         """
 
         idx = int(df["Idx"])
-        change = df["Close"] - self.closes[idx-1]
-        self.gain.append(change if change > 0 else 0)
-        self.loss.append(abs(change) if change < 0 else 0)
-        # Calc Average Gain/Loss
-        self.average_gain.append(sum(self.gain[-period:]) / period)
-        self.average_loss.append(sum(self.loss[-period:]) / period)
+        if idx > 0:
+            change = df["Close"] - self.closes[idx-1]
+            self.gain.append(change if change > 0 else 0)
+            self.loss.append(abs(change) if change < 0 else 0)
+            # Calc Initial Average Gain/Loss
+            if len(self.gain) == period:
+                self.average_gain.append(sum(self.gain[-period:]) / period)
+                self.average_loss.append(sum(self.loss[-period:]) / period)
+            # Calc Smoothed Average (Gain|Loss)
+            elif len(self.average_gain) > 0:
+                # (Prev AG * (N-1) + Current Gain) / N
+                self.average_gain.append(
+                    (self.average_gain[-1] * (period-1) + self.gain[-1]) / period
+                )
+                # (Prev AL * (N-1) + Current Loss) / N
+                self.average_loss.append(
+                    (self.average_loss[-1] * (period-1) + self.loss[-1]) / period
+                )
+            # RSI value
+            if len(self.average_gain) > 0:
+                self.rs = self.average_gain[-1] / self.average_loss[-1]
+                rsi = 100 - (100/(1+self.rs))
+                return rsi
+
+    def significant_high(
+            self, 
+            df: Series, 
+            iday_high: Series, 
+            period: int = 8
+            ):
+        """
+        Return if the Iday_High is significant in today's session
+        """
+
+        idx = int(df["Idx"])
+        idh = iday_high.round(4)
         
-        # First RSI value
-        if len(self.gain) == period:
-            self.rs = self.average_gain[-1] / self.average_loss[-1]
-            rsi = 100 - (100/(1+self.rs))
-            return rsi
-        
-        # RSI Smoothing
-        elif len(self.gain) > period:
-            smoothed_avg_gain = (self.average_gain[-2] * period-1) + self.gain[-1]
-            smoothed_avg_loss = (self.average_loss[-2] * period-1) + self.loss[-1]
-            self.rs = smoothed_avg_gain / smoothed_avg_loss
-            rsi = rsi = 100 - (100/(1+self.rs))
-            return rsi
+        # Reset intraday high if index is zero
+        if df["Iday_Idx"] == 0:
+            self.sig_high = set()
+
+        if idx >= period:
+            if round(df["Iday_High"],4) in self.sig_high:
+                return df["Iday_High"]
+            elif idh.iloc[idx] == idh.iloc[idx - period]:
+                self.sig_high.add(idh.iloc[idx])
+                return df["Iday_High"]
+            else:
+                return None

@@ -52,10 +52,12 @@ if __name__ == '__main__':
         args=[2, "SMA16"]
         )
     data["RSI"] = data.apply((indicator.rsi), axis=1)
+    data["Sig_High"] = data.apply(indicator.significant_high, axis=1, args=[data["Iday_High"]])
     
     # show data
-    print(data)
-    #print(data['2026-02-08 17:15':'2026-03-09 16:45'])
+    #print(data)
+    pd.options.display.max_rows = 100
+    print(data['2026-03-10 17:15':'2026-03-11 16:45'])
     # print(data[[
     #     "Open", "High", "Close", "Low", "Range",
     #     "Close_%High","Open_%High",
