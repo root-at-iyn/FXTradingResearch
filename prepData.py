@@ -1,5 +1,5 @@
 import pandas as pd
-from data.features import Candle, Intraday, Indicator
+from data.features import Candle, Intraday, Indicator, Pattern
 
 if __name__ == '__main__':
     #get data
@@ -40,7 +40,11 @@ if __name__ == '__main__':
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
+    data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])    
+    
+    data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4])
     data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16])
+    data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32])
     data["BB_Upper_16_2"] = data.apply(
         indicator.bollinger_band_upper, 
         axis=1, 
@@ -62,6 +66,10 @@ if __name__ == '__main__':
         axis=1, 
         args=[data["Iday_Low"], data["Day_Idx"]]
         )
+    
+    # Patterns
+    pattern = Pattern()
+    data["Hammer"] = data.apply(pattern.hammer, axis=1)
 
     # show data
     #print(data)

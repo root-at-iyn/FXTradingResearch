@@ -146,6 +146,7 @@ class Indicator():
         self.rs = None
         self.sig_high = set()
         self.sig_low = set()
+        self.true_range = []
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -311,3 +312,45 @@ class Indicator():
                 return df["Iday_Low"]
             else:
                 return None
+    
+    def ATR(self, df: Series, closes: Series, period: int = 12):
+        """Return the Average True Range for the period"""
+
+        idx = int(df["Idx"])
+        if idx > 0:
+            tr = [
+                df["Range"], 
+                (df["High"] - closes.iloc[idx-1]),
+                (df["Low"] - closes.iloc[idx-1])
+                ]
+            tr.sort()
+            self.true_range.append(tr.pop())
+        if len(self.true_range) >= period:
+            average_true_range = sum(self.true_range[-period:]) / period
+            return average_true_range
+
+
+class Pattern():
+    """Class for custom chart patterns"""
+    def __init__(self) -> None:
+        pass
+
+    def hammer(self, df: Series):
+        """Returns a boolean on whether a hammer candlestick pattern occured"""
+
+        if df["Range"] >= df["ATR"]:
+            current_bar = 1 if df["Close"] > df["Open"] else -1 if df["Close"] < df["Open"] else 0
+            if current_bar == 1:
+                if (df["LWick"] >= (df["Body"] * 2)) \
+                    and (df["Close_%High"] <= 0.20):
+                    return True
+                else:
+                    return False
+            elif current_bar == -1:
+                if (df["LWick"]) >= (df["Body"] * 2) \
+                    and (df["Open_%High"] <= 0.20):
+                    return True
+                else:
+                    return False
+            else:
+                return False

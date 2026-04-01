@@ -162,11 +162,11 @@ These are data points where an event occurs at some time (*x*) on the *x* axis a
 ### Shooting Star
 | Data Type | boolean|
 ------------|------|
-| Definition| A bearish reversal candlestick pattern that has a wider than average price range with the open near the close, and close at or near its low. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the top of the candle's body, which is also larger than the candle's body. The top of the candle's body is the open when the bar is negative, and the close when the bar is positive.|
+| Definition| A bearish reversal candlestick pattern that has a wider than average price range with the open near the close, and close at or near its low. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the top of the candle's body, which is also larger than the candle's body. The top of the candle's body is the open when the bar is negative, and the close when the bar is positive. Specifically, the upper wick should be at least twice the height of the body.|
 | Use Case  | Used in reversal strategies to signal a sell opportunity.|
 
 ### Hammer
 | Data Type | boolean|
 ------------|------|
-| Definition| A bullish reversal candlestick pattern that has a wider than average price range with the close near the open, and close at or near it's high. The pattern creates a distinctive looking *wick* because of the wide price range between the low and the bottom of the candle's body, which is also larger than the candle's body.|
+| Definition| A bullish reversal candlestick pattern that has a wider than average price range with the close near the open, and close at or near it's high. The pattern creates a distinctive looking *wick* because of the wide price range between the low and the bottom of the candle's body, which is also larger than the candle's body. Specifically, the lower wick should be at least twice the height of the body.|
 | Use Case  | Used in reversal strategies to signal a buy opportunity.|
