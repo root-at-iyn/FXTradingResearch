@@ -1,6 +1,6 @@
 from pandas import Series, to_datetime
 from datetime import time
-from math import sqrt
+from math import sqrt, atan, pi
 
 class Candle():
     """
@@ -360,6 +360,22 @@ class Indicator():
             return -2
         else:
             return 0
+        
+    def sma_slope(
+            self, 
+            df: Series, 
+            sma: Series, 
+            lookback: int = 2, 
+            run: int = 3
+        ):
+        """Return the angle of the SMA slope"""
+
+        idx = int(df["Idx"])
+        if idx >= lookback:
+            pipsize = 0.0001
+            rise = (sma.iloc[idx] - sma.iloc[idx-lookback]) / pipsize
+            slope = rise / run
+            return atan(slope) * (180/pi)
 
 
 class Pattern():

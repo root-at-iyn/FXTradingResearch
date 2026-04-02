@@ -71,6 +71,14 @@ if __name__ == '__main__':
         axis=1, 
         args=["SMA4","SMA16","SMA32"]
         )
+    data["SMA16_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA16"]]
+        )
+    data["SMA32_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA32"]]
+        )
     
     # Patterns
     pattern = Pattern()
