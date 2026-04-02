@@ -66,6 +66,11 @@ if __name__ == '__main__':
         axis=1, 
         args=[data["Iday_Low"], data["Day_Idx"]]
         )
+    data["SMA_Trend"] = data.apply(
+        indicator.sma_trend, 
+        axis=1, 
+        args=["SMA4","SMA16","SMA32"]
+        )
     
     # Patterns
     pattern = Pattern()

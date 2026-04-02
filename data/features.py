@@ -328,6 +328,38 @@ class Indicator():
         if len(self.true_range) >= period:
             average_true_range = sum(self.true_range[-period:]) / period
             return average_true_range
+        
+    def sma_trend(
+            self, 
+            df: Series, 
+            fast_sma_col_name: str, 
+            slow_sma_col_name: str,
+            xslow_sma_col_name: str  
+            ):
+        """Returns a value between -2 and 2 on the strength SMA trend
+        
+        The SMA Trend is categorised as:
+
+        * -2 = Downtrend
+        * -1 = Bearish Retracement
+        *  0 = Consolidation
+        *  1 = Bullish Retracement
+        *  2 = Uptrend
+        """
+        if df[fast_sma_col_name] > df[slow_sma_col_name] \
+        and df[slow_sma_col_name] > df[xslow_sma_col_name]:
+            return 2
+        elif df[slow_sma_col_name] < df[xslow_sma_col_name] \
+        and df[fast_sma_col_name] > df[xslow_sma_col_name]:
+            return 1
+        elif df[slow_sma_col_name] > df[xslow_sma_col_name] \
+        and df[fast_sma_col_name] < df[xslow_sma_col_name]:
+            return -1
+        elif df[xslow_sma_col_name] > df[slow_sma_col_name] \
+        and df[fast_sma_col_name] < df[slow_sma_col_name]:
+            return -2
+        else:
+            return 0
 
 
 class Pattern():
