@@ -366,7 +366,8 @@ class Indicator():
             df: Series, 
             sma: Series, 
             lookback: int = 2, 
-            run: int = 3
+            run: int = 3,
+            pipsize: int = 0.0001
         ):
         """Return the angle of the SMA slope"""
 
@@ -383,22 +384,39 @@ class Pattern():
     def __init__(self) -> None:
         pass
 
+    def current_bar(self, df: Series):
+        return 1 if df["Close"] > df["Open"] else \
+                -1 if df["Close"] < df["Open"] else 0
+
     def hammer(self, df: Series):
         """Returns a boolean on whether a hammer candlestick pattern occured"""
 
-        if df["Range"] >= df["ATR"]:
-            current_bar = 1 if df["Close"] > df["Open"] else -1 if df["Close"] < df["Open"] else 0
-            if current_bar == 1:
+        if round(df["Range"],4) >= df["ATR"]:
+            if self.current_bar(df) == 1:
                 if (df["LWick"] >= (df["Body"] * 2)) \
-                    and (df["Close_%High"] <= 0.20):
+                    and (df["Close_%High"] <= 0.34):
                     return True
                 else:
                     return False
-            elif current_bar == -1:
-                if (df["LWick"]) >= (df["Body"] * 2) \
-                    and (df["Open_%High"] <= 0.20):
+            elif self.current_bar(df) == -1:
+                if (df["LWick"] >= (df["Body"] * 2)) \
+                    and (df["Close_%High"] <= 0.34):
                     return True
                 else:
                     return False
             else:
                 return False
+    
+    def shooting_star(self, df: Series):
+        """Returns a boolean on whether a shooting star pattern occured"""
+
+        if round(df["Range"],4) >= df["ATR"] and df["UWick"] >= 2 * df["Body"]:
+            if self.current_bar(df) == -1: 
+                if df["Close_%High"] >= 0.66:
+                    return True
+            elif self.current_bar(df) == 1:
+                if df["Close_%High"] >= 0.66:
+                    return True
+            else:
+                return False
+                

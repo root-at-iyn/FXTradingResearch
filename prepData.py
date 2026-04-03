@@ -83,15 +83,16 @@ if __name__ == '__main__':
     # Patterns
     pattern = Pattern()
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
+    data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
 
     # show data
     #print(data)
     pd.options.display.max_rows = 100
-    print(data['2026-03-09 17:15':'2026-03-10 16:45'])
-    # print(data[[
-    #     "Open", "High", "Close", "Low", "Range",
-    #     "Close_%High","Open_%High",
-    #     "Iday_High","Iday_Low","Iday_Range", 
-    #     "Close_%DHigh", "Open_%DHigh"
-    #     ]])
+    #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
+    print(data['2026-03-05 17:15':'2026-03-06 16:45'][[
+        "Open", "High", "Close", "Low", "Range",
+        "Close_%High","Open_%High",
+        "ATR","Body","LWick","UWick", 
+        "Hammer", "Shooting_Star"
+        ]])
     
