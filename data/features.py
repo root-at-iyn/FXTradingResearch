@@ -391,31 +391,33 @@ class Pattern():
     def hammer(self, df: Series):
         """Returns a boolean on whether a hammer candlestick pattern occured"""
 
-        if round(df["Range"],4) >= df["ATR"]:
-            if self.current_bar(df) == 1:
-                if (df["LWick"] >= (df["Body"] * 2)) \
-                    and (df["Close_%High"] <= 0.34):
-                    return True
-                else:
-                    return False
-            elif self.current_bar(df) == -1:
-                if (df["LWick"] >= (df["Body"] * 2)) \
-                    and (df["Close_%High"] <= 0.34):
-                    return True
-                else:
-                    return False
+        if self.current_bar(df) == 1:
+            if (df["LWick"] >= (df["Body"] * 2)) \
+                and (df["Close_%High"] <= 0.34) \
+                and df["Body"] > df["UWick"]:
+                return True
             else:
                 return False
+        elif self.current_bar(df) == -1:
+            if (df["LWick"] >= (df["Body"] * 2)) \
+                and (df["Close_%High"] <= 0.34) \
+                and df["Body"] > df["UWick"]:
+                return True
+            else:
+                return False
+        else:
+            return False
     
     def shooting_star(self, df: Series):
         """Returns a boolean on whether a shooting star pattern occured"""
-
-        if round(df["Range"],4) >= df["ATR"] and df["UWick"] >= 2 * df["Body"]:
+        if  df["UWick"] >= 2 * df["Body"]:
             if self.current_bar(df) == -1: 
-                if df["Close_%High"] >= 0.66:
+                if df["Close_%High"] >= 0.66 \
+                    and df["Body"] > df["LWick"]:
                     return True
             elif self.current_bar(df) == 1:
-                if df["Close_%High"] >= 0.66:
+                if df["Close_%High"] >= 0.66 \
+                and df["Body"] > df["LWick"]:
                     return True
             else:
                 return False

@@ -89,8 +89,8 @@ if __name__ == '__main__':
     #print(data)
     pd.options.display.max_rows = 100
     #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
-    print(data['2026-03-05 17:15':'2026-03-06 16:45'][[
-        "Open", "High", "Close", "Low", "Range",
+    print(data['2026-02-19 17:15':'2026-02-20 16:45'][[
+        "Open", "High", "Low", "Close", "Range",
         "Close_%High","Open_%High",
         "ATR","Body","LWick","UWick", 
         "Hammer", "Shooting_Star"
