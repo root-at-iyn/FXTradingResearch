@@ -81,9 +81,10 @@ if __name__ == '__main__':
         )
     
     # Patterns
-    pattern = Pattern()
+    pattern = Pattern(data["Open"],data["High"],data["Low"],data["Close"])
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
+    data["Bull_Engulf"] = data.apply(pattern.bullish_engulfing, axis=1)
 
     # show data
     #print(data)
@@ -93,6 +94,6 @@ if __name__ == '__main__':
         "Open", "High", "Low", "Close", "Range",
         "Close_%High","Open_%High",
         "ATR","Body","LWick","UWick", 
-        "Hammer", "Shooting_Star"
+        "Hammer", "Shooting_Star", "Bull_Engulf"
         ]])
     

@@ -381,8 +381,14 @@ class Indicator():
 
 class Pattern():
     """Class for custom chart patterns"""
-    def __init__(self) -> None:
-        pass
+    def __init__(
+            self, 
+            open: Series, high: Series, low: Series, close: Series
+            ) -> None:
+        self.open = open
+        self.high = high
+        self.low = low 
+        self.close = close
 
     def current_bar(self, df: Series):
         return 1 if df["Close"] > df["Open"] else \
@@ -421,4 +427,15 @@ class Pattern():
                     return True
             else:
                 return False
-                
+            
+    def bullish_engulfing(self, df: Series):
+        """Returns a boolean on whether a bullish engulfing pattern occured"""
+        if self.current_bar(df) == 1 and df["Range"] > df["ATR"]:
+            idx = int(df["Idx"])
+            if idx > 0:
+                if self.close.iloc[idx-1] < self.open.iloc[idx-1] \
+                and df["Open"] <= self.close.iloc[idx-1] \
+                and df["Close"] >= self.open.iloc[idx-1]:
+                    return True
+                else:
+                    return False

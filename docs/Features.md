@@ -162,11 +162,23 @@ These are data points where an event occurs at some time (*x*) on the *x* axis a
 ### Shooting Star
 | Data Type | boolean|
 ------------|------|
-| Definition| A bearish reversal candlestick pattern that has a wider than average price range with the open near the close, and close at or near its low. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the top of the candle's body, which is also larger than the candle's body. The top of the candle's body is the open when the bar is negative, and the close when the bar is positive. Specifically, the upper wick should be at least twice the height of the body.|
-| Use Case  | Used in reversal strategies to signal a sell opportunity.|
+| Definition| A bearish reversal candlestick pattern that has a wider than average price range with the open near the close, and close at or near its low. The pattern creates a distinctive looking *wick* because of the wide price range between the high and the top of the candle's body, which is also larger than the candle's body. The top of the candle's body is the open when the bar is negative, and the close when the bar is positive. Specifically, the upper wick should be at least twice the height of the body. The pattern must occur in after a rally in price.|
+| Use Case  | Used in reversal strategies to signal a change in the current trend.|
 
 ### Hammer
 | Data Type | boolean|
 ------------|------|
-| Definition| A bullish reversal candlestick pattern that has a wider than average price range with the close near the open, and close at or near it's high. The pattern creates a distinctive looking *wick* because of the wide price range between the low and the bottom of the candle's body, which is also larger than the candle's body. Specifically, the lower wick should be at least twice the height of the body.|
-| Use Case  | Used in reversal strategies to signal a buy opportunity.|
+| Definition| A bullish reversal candlestick pattern that has a wider than average price range with the close near the open, and close at or near it's high. The pattern creates a distinctive looking *wick* because of the wide price range between the low and the bottom of the candle's body, which is also larger than the candle's body. Specifically, the lower wick should be at least twice the height of the body. The hammer must occur after a decline in price. If it occurs after a rally, then the pattern is a 'hanging man' indicating price action is turning bearish.|
+| Use Case  | Used in reversal strategies to signal a change in the current trend.|
+
+### Bullish Engulfing
+| Data Type | boolean|
+|-----------|------|
+| Definition| A bullish reversal candlestick pattern that occurs after a decline in price, where the current candle's body (which is positive) wraps around (i.e. engulfs) the body of the prior negative candle. The current candle should have its open below or equal to the close of the prior candle, and its close greater than or equal to the previous candle. The current candle should have a larger than average range, indicating an acceleration in the price rising. |
+| Use Case  | Used in reversal strategies to signal the end of a price decline. The pattern also acts as support.|
+
+### Bearish Engulfing
+| Data Type | boolean|
+|-----------|------|
+| Definition| A bearish reversal candlestick pattern that occurs after a rally in price, where the current candle's body (which is negative) wraps around (i.e. engulfs) the body of the prior positive candle. The current candle should have its open above or equal to the close of the prior candle, and its close below than or equal to the previous candle. The current candle should have a larger than average range, indicating an acceleration in the price falling. |
+| Use Case  | Used in reversal strategies to signal the end of a price rally. The pattern also acts as resistance.|
