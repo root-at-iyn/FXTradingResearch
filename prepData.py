@@ -85,15 +85,19 @@ if __name__ == '__main__':
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
     data["Bull_Engulf"] = data.apply(pattern.bullish_engulfing, axis=1)
+    data["Bear_Engulf"] = data.apply(pattern.bearish_engulfing, axis=1)
+    data["Dark_Cloud"] = data.apply(pattern.dark_cloud_cover, axis=1)
+    data["Piercing"] = data.apply(pattern.piercing, axis=1)
 
     # show data
     #print(data)
     pd.options.display.max_rows = 100
     #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
-    print(data['2026-02-19 17:15':'2026-02-20 16:45'][[
+    print(data['2026-02-24 17:15':'2026-02-25 16:45'][[
         "Open", "High", "Low", "Close", "Range",
         "Close_%High","Open_%High",
         "ATR","Body","LWick","UWick", 
-        "Hammer", "Shooting_Star", "Bull_Engulf"
+        "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
+        "Dark_Cloud", "Piercing"
         ]])
     

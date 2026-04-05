@@ -439,3 +439,55 @@ class Pattern():
                     return True
                 else:
                     return False
+                
+    def bearish_engulfing(self, df: Series):
+        """Returns a boolean on whether a bearish engulfing pattern occured"""
+        if self.current_bar(df) == -1 and df["Range"] > df["ATR"]:
+            idx = int(df["Idx"])
+            if idx > 0:
+                if self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+                and df["Open"] >= self.close.iloc[idx-1] \
+                and df["Close"] <= self.open.iloc[idx-1]:
+                    return True
+                else:
+                    return False
+                
+    def dark_cloud_cover(self, df: Series):
+        """Returns a boolean on whether a dark cloud cover pattern occured"""
+        idx = int(df["Idx"])
+        if idx > 0:
+            prev_close = self.close.iloc[idx-1]
+            prev_open = self.open.iloc[idx-1]
+            prev_high = self.high.iloc[idx-1]
+            prev_body = prev_close - prev_open
+            if self.current_bar(df) == -1 and df["Range"] > df["ATR"]:
+                if prev_close > prev_open \
+                and df["Open"] > prev_high \
+                and df["Close"] <= (prev_close - (0.5 * prev_body)):
+                    return True
+                elif prev_close > prev_open \
+                and df["High"] > prev_high \
+                and df["Close"] <= (prev_close - (0.5 * prev_body)) \
+                and df["Close"] >= prev_open \
+                and df["Body"] > df["LWick"]:
+                    return True
+
+    def piercing(self, df: Series):
+        """Returns a boolean on whether a piercing pattern occured"""
+        idx = int(df["Idx"])
+        if idx > 0:
+            prev_close = self.close.iloc[idx-1]
+            prev_open = self.open.iloc[idx-1]
+            prev_low = self.low.iloc[idx-1]
+            prev_body = abs(prev_close - prev_open)
+            if self.current_bar(df) == 1 and df["Range"] > df["ATR"]:
+                if prev_close < prev_open \
+                and df["Open"] < prev_low \
+                and df["Close"] >= (prev_open - (0.5 * prev_body)):
+                    return True
+                elif prev_close < prev_open \
+                and df["Low"] < prev_low \
+                and df["Close"] < prev_open \
+                and df["Close"] >= (prev_open - (0.5 * prev_body)) \
+                and df["Body"] > df["UWick"]:
+                    return True
