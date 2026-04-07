@@ -265,23 +265,23 @@ class Indicator():
         """
 
         idx = int(df["Idx"])
-        idh = iday_high.round(4)
+        idh = iday_high
         
         # Reset significant intraday highs every trading day
         if df["Iday_Idx"] == 0:
             self.sig_high = set()
+            self.highest_sig_high = None
 
         if idx >= period:
-            if round(df["Iday_High"],4) in self.sig_high:
-                return df["Iday_High"]
-            # Check if the Iday High has been the same for `period`
-            # Check if the High Low was created in this session
-            elif idh.iloc[idx] == idh.iloc[idx - period] \
-                and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
-                self.sig_high.add(idh.iloc[idx])
-                return df["Iday_High"]
-            else:
-                return None
+            if idh.iloc[idx] not in self.sig_high:
+                # Check if the Iday High has been the same for `period`
+                # Check if the High Low was created in this session
+                if idh.iloc[idx] == idh.iloc[idx - period] \
+                    and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
+                    self.sig_high.add(idh.iloc[idx])
+                    self.highest_sig_high = idh.iloc[idx]
+
+        return self.highest_sig_high
 
     def significant_low(
             self, 
@@ -295,23 +295,23 @@ class Indicator():
         """
 
         idx = int(df["Idx"])
-        idl = iday_low.round(4)
+        idl = iday_low
         
         # Reset significant intraday lows every trading day
         if int(df["Iday_Idx"]) == 0:
             self.sig_low = set()
+            self.lowest_sig_low = None
 
         if idx >= period:
-            if round(df["Iday_Low"],4) in self.sig_low:
-                return df["Iday_Low"]
-            # Check if the Iday Low has been the same for `period`
-            # Check if the Iday Low was created in this session
-            elif idl.iloc[idx] == idl.iloc[idx - period] \
-                and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
-                self.sig_low.add(idl.iloc[idx])
-                return df["Iday_Low"]
-            else:
-                return None
+            if idl.iloc[idx] not in self.sig_low:
+                # Check if the Iday Low has been the same for `period`
+                # Check if the Iday Low was created in this session
+                if idl.iloc[idx] == idl.iloc[idx - period] \
+                    and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
+                    self.sig_low.add(idl.iloc[idx])
+                    self.lowest_sig_low = idl.iloc[idx]
+        
+        return self.lowest_sig_low
     
     def ATR(self, df: Series, closes: Series, period: int = 12):
         """Return the Average True Range for the period"""
@@ -525,3 +525,59 @@ class Pattern():
             and df["Open"] > bb_upper.iloc[idx] \
             and df["Close"] < bb_upper.iloc[idx]:
                 return True
+            
+    def intraday_low_reversal(self, df: Series):
+        """
+        Returns a boolean on whether price failed to close below the 
+        lowest significant intraday low
+        """
+
+        idx = int(df["Idx"])
+        if idx > 0:
+            if df["Low"] < df["Sig_Low"] \
+            and df["Close"] > df["Sig_Low"] \
+            and df["Low"] == df["Iday_Low"]:
+                return True
+
+    def intraday_high_reversal(self, df: Series):
+        """
+        Returns a boolean on whether price failed to close above the highest
+        significant high
+        """
+
+        idx = int(df["Idx"])
+        if idx > 0:
+            if df["High"] > df["Sig_High"] \
+            and df["Close"] < df["Sig_High"] \
+            and df["High"] == df["Iday_High"]:
+                return True
+            
+    def support_resistance(self, df: Series):
+        """Return whether price failed at broke through a significant level
+        
+        - 1 = Test of Resistance
+        - 2 = Broken Resistance
+        - 3 = Test of Support
+        - 4 = Broken Support
+        """
+
+        if df["Open"] < df["Sig_High"]:
+            if df["High"] > df["Sig_High"] and df["Close"] < df["Sig_High"]:
+                return 1
+            elif df["Close"] > df["Sig_High"]:
+                return 2
+        elif df["Open"] > df["Sig_High"]:
+            if df["Low"] < df["Sig_High"] and df["Close"] > df["Sig_High"]:
+                return 3
+            elif df["Close"] < df["Sig_High"]:
+                return 4
+        elif df["Open"] < df["Sig_Low"]:
+            if df["High"] > df["Sig_Low"] and df["Close"] < df["Sig_Low"]:
+                return 1
+            elif df["Close"] > df["Sig_Low"]:
+                return 2
+        elif df["Open"] > df["Sig_Low"]:
+            if df["Low"] < df["Sig_Low"] and df["Close"] > df["Sig_Low"]:
+                return 3
+            elif df["Close"] < df["Sig_Low"]:
+                return 4 

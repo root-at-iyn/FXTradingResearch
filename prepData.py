@@ -96,16 +96,27 @@ if __name__ == '__main__':
         pattern.bearish_bb_reversal, axis=1, 
         args=[data["BB_Upper_16_2"]]
         )
+    data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
+    data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
+    data["S/R"] = data.apply(pattern.support_resistance, axis=1)
+
     
     # show data
     #print(data)
     pd.options.display.max_rows = 100
     #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
-    print(data['2026-03-02 17:15':'2026-03-03 16:45'][[
-        "Open", "High", "Low", "Close", "Range",
-        "Close_%High","Open_%High",
-        "ATR","Body","LWick","UWick", 
-        "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
-        "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR"
-        ]])
+
+    # print(data['2026-03-02 17:15':'2026-03-03 16:45'][[
+    #     "Open", "High", "Low", "Close", "Range",
+    #     "Close_%High","Open_%High",
+    #     "ATR","Body","LWick","UWick", 
+    #     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
+    #     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR"
+    #     ]])
     
+    print(data['2026-02-17 17:15':'2026-02-18 16:45'][[
+    "Open", "High", "Low", "Close", "Range", 
+    "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
+    "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
+    "Sig_Low", "ILR", "Sig_High", "IHR", "S/R"
+    ]])
