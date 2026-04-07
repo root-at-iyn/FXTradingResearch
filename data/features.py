@@ -435,7 +435,9 @@ class Pattern():
             if idx > 0:
                 if self.close.iloc[idx-1] < self.open.iloc[idx-1] \
                 and df["Open"] <= self.close.iloc[idx-1] \
-                and df["Close"] >= self.open.iloc[idx-1]:
+                and df["Close"] >= self.open.iloc[idx-1] \
+                and df["High"] > self.high.iloc[idx-1] \
+                and df["Low"] < self.low.iloc[idx-1]:
                     return True
                 else:
                     return False
@@ -447,7 +449,9 @@ class Pattern():
             if idx > 0:
                 if self.close.iloc[idx-1] > self.open.iloc[idx-1] \
                 and df["Open"] >= self.close.iloc[idx-1] \
-                and df["Close"] <= self.open.iloc[idx-1]:
+                and df["Close"] <= self.open.iloc[idx-1] \
+                and df["High"] > self.high.iloc[idx-1] \
+                and df["Low"] < self.low.iloc[idx-1]:
                     return True
                 else:
                     return False
@@ -491,3 +495,33 @@ class Pattern():
                 and df["Close"] >= (prev_open - (0.5 * prev_body)) \
                 and df["Body"] > df["UWick"]:
                     return True
+                
+    def bullish_bb_reversal(self, df:Series, bb_lower: Series):
+        """
+        Returns a boolean on whether a bullish bollinger band reversal occured
+        """
+
+        idx = int(df["Idx"])
+        if idx > 0:
+            prev_open = self.open.iloc[idx-1]
+            prev_close = self.close.iloc[idx-1]
+            if self.current_bar(df) ==1 and prev_close < prev_open \
+            and prev_close < bb_lower.iloc[idx-1] \
+            and df["Open"] < bb_lower.iloc[idx] \
+            and df["Close"] > bb_lower.iloc[idx]:
+                return True
+
+    def bearish_bb_reversal(self, df:Series, bb_upper: Series):
+        """
+        Returns a boolean on whether a bearish bollinger band reversal occured
+        """
+
+        idx = int(df["Idx"])
+        if idx > 0:
+            prev_open = self.open.iloc[idx-1]
+            prev_close = self.close.iloc[idx-1]
+            if self.current_bar(df) ==-1 and prev_close > prev_open \
+            and prev_close > bb_upper.iloc[idx-1] \
+            and df["Open"] > bb_upper.iloc[idx] \
+            and df["Close"] < bb_upper.iloc[idx]:
+                return True

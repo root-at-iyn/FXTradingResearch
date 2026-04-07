@@ -88,16 +88,24 @@ if __name__ == '__main__':
     data["Bear_Engulf"] = data.apply(pattern.bearish_engulfing, axis=1)
     data["Dark_Cloud"] = data.apply(pattern.dark_cloud_cover, axis=1)
     data["Piercing"] = data.apply(pattern.piercing, axis=1)
-
+    data["Bull_BBR"] = data.apply(
+        pattern.bullish_bb_reversal, axis=1, 
+        args=[data["BB_Lower_16_2"]]
+        ) 
+    data["Bear_BBR"] = data.apply(
+        pattern.bearish_bb_reversal, axis=1, 
+        args=[data["BB_Upper_16_2"]]
+        )
+    
     # show data
     #print(data)
     pd.options.display.max_rows = 100
     #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
-    print(data['2026-02-24 17:15':'2026-02-25 16:45'][[
+    print(data['2026-03-02 17:15':'2026-03-03 16:45'][[
         "Open", "High", "Low", "Close", "Range",
         "Close_%High","Open_%High",
         "ATR","Body","LWick","UWick", 
         "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
-        "Dark_Cloud", "Piercing"
+        "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR"
         ]])
     
