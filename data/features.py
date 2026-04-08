@@ -383,12 +383,13 @@ class Pattern():
     """Class for custom chart patterns"""
     def __init__(
             self, 
-            open: Series, high: Series, low: Series, close: Series
+            open: Series, high: Series, low: Series, close: Series, range: Series
             ) -> None:
         self.open = open
         self.high = high
         self.low = low 
         self.close = close
+        self.range = range
 
     def current_bar(self, df: Series):
         return 1 if df["Close"] > df["Open"] else \
@@ -580,4 +581,36 @@ class Pattern():
             if df["Low"] < df["Sig_Low"] and df["Close"] > df["Sig_Low"]:
                 return 3
             elif df["Close"] < df["Sig_Low"]:
-                return 4 
+                return 4
+
+    def bb_upper_breakout(
+            self, df: Series, period: int, 
+            bb_upper: str = "BB_Upper_16_2"
+            ):
+        """Returns whether breakout above the upper bollinger band occured"""
+
+        idx = int(df["Idx"])
+        if idx >= period:
+            max_range = max(self.range.iloc[idx-period:idx])
+            if self.current_bar(df) == 1 and df["Close"] > df[bb_upper]:
+                if df["Range"] >= (1.25 * df["ATR"]) \
+                and df["Close_%High"] < 0.5 \
+                and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.20 \
+                and df["Body"] > max_range:
+                    return True
+
+    def bb_lower_breakout(
+            self, df: Series, period: int, 
+            bb_lower: str = "BB_Lower_16_2"
+            ):
+        """Returns whether breakout below the lower bollinger band occured"""
+
+        idx = int(df["Idx"])
+        if idx >= period:
+            max_range = max(self.range.iloc[idx-period:idx])
+            if self.current_bar(df) == -1 and df["Close"] < df[bb_lower]:
+                if df["Range"] >= (1.25 * df["ATR"]) \
+                and df["Close_%High"] > 0.5 \
+                and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.20 \
+                and df["Body"] > max_range:
+                    return True

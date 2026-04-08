@@ -81,7 +81,13 @@ if __name__ == '__main__':
         )
     
     # Patterns
-    pattern = Pattern(data["Open"],data["High"],data["Low"],data["Close"])
+    pattern = Pattern(
+        data["Open"],
+        data["High"],
+        data["Low"],
+        data["Close"], 
+        data["Range"]
+        )
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
     data["Bull_Engulf"] = data.apply(pattern.bullish_engulfing, axis=1)
@@ -99,7 +105,8 @@ if __name__ == '__main__':
     data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
     data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
     data["S/R"] = data.apply(pattern.support_resistance, axis=1)
-
+    data["BBU_BO"] = data.apply(pattern.bb_upper_breakout, axis=1, args=[8])
+    data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8]) 
     
     # show data
     #print(data)
@@ -114,9 +121,10 @@ if __name__ == '__main__':
     #     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR"
     #     ]])
     
-    print(data['2026-02-17 17:15':'2026-02-18 16:45'][[
+    print(data['2026-03-03 17:15':'2026-03-04 16:45'][[
     "Open", "High", "Low", "Close", "Range", 
     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
-    "Sig_Low", "ILR", "Sig_High", "IHR", "S/R"
+    "Sig_Low", "ILR", "Sig_High", "IHR", "S/R",
+    "BBU_BO", "BBL_BO"
     ]])
