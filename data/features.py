@@ -403,17 +403,11 @@ class Pattern():
                 and (df["Close_%High"] <= 0.34) \
                 and df["Body"] > df["UWick"]:
                 return True
-            else:
-                return False
         elif self.current_bar(df) == -1:
             if (df["LWick"] >= (df["Body"] * 2)) \
                 and (df["Close_%High"] <= 0.34) \
                 and df["Body"] > df["UWick"]:
                 return True
-            else:
-                return False
-        else:
-            return False
     
     def shooting_star(self, df: Series):
         """Returns a boolean on whether a shooting star pattern occured"""
@@ -426,8 +420,6 @@ class Pattern():
                 if df["Close_%High"] >= 0.66 \
                 and df["Body"] > df["LWick"]:
                     return True
-            else:
-                return False
             
     def bullish_engulfing(self, df: Series):
         """Returns a boolean on whether a bullish engulfing pattern occured"""
@@ -440,8 +432,6 @@ class Pattern():
                 and df["High"] > self.high.iloc[idx-1] \
                 and df["Low"] < self.low.iloc[idx-1]:
                     return True
-                else:
-                    return False
                 
     def bearish_engulfing(self, df: Series):
         """Returns a boolean on whether a bearish engulfing pattern occured"""
@@ -454,8 +444,6 @@ class Pattern():
                 and df["High"] > self.high.iloc[idx-1] \
                 and df["Low"] < self.low.iloc[idx-1]:
                     return True
-                else:
-                    return False
                 
     def dark_cloud_cover(self, df: Series):
         """Returns a boolean on whether a dark cloud cover pattern occured"""
@@ -507,6 +495,7 @@ class Pattern():
             prev_open = self.open.iloc[idx-1]
             prev_close = self.close.iloc[idx-1]
             if self.current_bar(df) ==1 and prev_close < prev_open \
+            and prev_open > bb_lower.iloc[idx-1] \
             and prev_close < bb_lower.iloc[idx-1] \
             and df["Open"] < bb_lower.iloc[idx] \
             and df["Close"] > bb_lower.iloc[idx]:
@@ -522,6 +511,7 @@ class Pattern():
             prev_open = self.open.iloc[idx-1]
             prev_close = self.close.iloc[idx-1]
             if self.current_bar(df) ==-1 and prev_close > prev_open \
+            and prev_open < bb_upper.iloc[idx-1] \
             and prev_close > bb_upper.iloc[idx-1] \
             and df["Open"] > bb_upper.iloc[idx] \
             and df["Close"] < bb_upper.iloc[idx]:

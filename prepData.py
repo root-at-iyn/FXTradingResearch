@@ -1,13 +1,10 @@
 import pandas as pd
 from data.features import Candle, Intraday, Indicator, Pattern
 
-if __name__ == '__main__':
-    #get data
-    data = pd.read_csv("./output/GBPUSD_15mins_1yr_End_20260311.csv")
-    
-    #clean data
-    data.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
-    
+
+def apply_features(data: pd.DataFrame):
+    """Apply features and indicators to OHLC dataframe"""
+
     #set date to datetimeindex
     data["Date"] = pd.DatetimeIndex(data["Date"],tz="Europe/London")
     data.set_index("Date", inplace=True)
@@ -106,25 +103,30 @@ if __name__ == '__main__':
     data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
     data["S/R"] = data.apply(pattern.support_resistance, axis=1)
     data["BBU_BO"] = data.apply(pattern.bb_upper_breakout, axis=1, args=[8])
-    data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8]) 
-    
-    # show data
-    #print(data)
-    pd.options.display.max_rows = 100
-    #print(data['2026-03-10 17:15':'2026-03-11 16:45'])
+    data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8])
+    return data
 
-    # print(data['2026-03-02 17:15':'2026-03-03 16:45'][[
-    #     "Open", "High", "Low", "Close", "Range",
-    #     "Close_%High","Open_%High",
-    #     "ATR","Body","LWick","UWick", 
-    #     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
-    #     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR"
-    #     ]])
-    
-    print(data['2026-03-03 17:15':'2026-03-04 16:45'][[
-    "Open", "High", "Low", "Close", "Range", 
+
+if __name__ == '__main__':
+    #get data
+    PATH = "./output"
+    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    df = pd.read_csv(f"{PATH}/{FILE}")
+    #clean IBKR data
+    df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
+    # apply features to dataframe
+    data = apply_features(df)
+     
+    # show data
+    pd.options.display.max_rows = 100
+
+    # Print patterns
+    print(data['2026-03-10 17:15':'2026-03-11 16:45'][[ 
     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
     "Sig_Low", "ILR", "Sig_High", "IHR", "S/R",
     "BBU_BO", "BBL_BO"
     ]])
+
+    # output feature enhanced price data to csv
+    #data.to_csv(f"{PATH}/FE_{FILE}")
