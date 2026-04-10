@@ -101,7 +101,7 @@ def apply_features(data: pd.DataFrame):
         )
     data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
     data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
-    data["S/R"] = data.apply(pattern.support_resistance, axis=1)
+    data["S_R"] = data.apply(pattern.support_resistance, axis=1)
     data["BBU_BO"] = data.apply(pattern.bb_upper_breakout, axis=1, args=[8])
     data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8])
     return data
@@ -124,9 +124,9 @@ if __name__ == '__main__':
     print(data['2026-03-10 17:15':'2026-03-11 16:45'][[ 
     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
-    "Sig_Low", "ILR", "Sig_High", "IHR", "S/R",
+    "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
     "BBU_BO", "BBL_BO"
     ]])
 
     # output feature enhanced price data to csv
-    #data.to_csv(f"{PATH}/FE_{FILE}")
+    # data.to_csv(f"{PATH}/FE_{FILE}")
