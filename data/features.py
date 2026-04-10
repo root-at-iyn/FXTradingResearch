@@ -557,17 +557,17 @@ class Pattern():
                 return 1
             elif df["Close"] > df["Sig_High"]:
                 return 2
-        elif df["Open"] > df["Sig_High"]:
+        if df["Open"] > df["Sig_High"]:
             if df["Low"] < df["Sig_High"] and df["Close"] > df["Sig_High"]:
                 return 3
             elif df["Close"] < df["Sig_High"]:
                 return 4
-        elif df["Open"] < df["Sig_Low"]:
+        if df["Open"] < df["Sig_Low"]:
             if df["High"] > df["Sig_Low"] and df["Close"] < df["Sig_Low"]:
                 return 1
             elif df["Close"] > df["Sig_Low"]:
                 return 2
-        elif df["Open"] > df["Sig_Low"]:
+        if df["Open"] > df["Sig_Low"]:
             if df["Low"] < df["Sig_Low"] and df["Close"] > df["Sig_Low"]:
                 return 3
             elif df["Close"] < df["Sig_Low"]:
