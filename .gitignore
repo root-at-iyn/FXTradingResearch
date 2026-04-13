@@ -2,4 +2,4 @@
 .git/
 venv/
 __pycache__/
-*/.ipynb_checkpoints
+research/.ipynb_checkpoints
