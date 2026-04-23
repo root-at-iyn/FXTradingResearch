@@ -53,6 +53,11 @@ def apply_features(data: pd.DataFrame):
         args=[2, "SMA16"]
         )
     data["RSI"] = data.apply((indicator.rsi), axis=1)
+    data["RSI_DVG"] = data.apply(
+        indicator.rsi_divergence, 
+        axis=1, 
+        args=[data["RSI"], data["High"], data["Low"]]
+        )
     data["Sig_High"] = data.apply(
         indicator.significant_high, 
         axis=1, 
@@ -91,26 +96,32 @@ def apply_features(data: pd.DataFrame):
     data["Bear_Engulf"] = data.apply(pattern.bearish_engulfing, axis=1)
     data["Dark_Cloud"] = data.apply(pattern.dark_cloud_cover, axis=1)
     data["Piercing"] = data.apply(pattern.piercing, axis=1)
-    data["Bull_BBR"] = data.apply(
-        pattern.bullish_bb_reversal, axis=1, 
-        args=[data["BB_Lower_16_2"]]
-        ) 
-    data["Bear_BBR"] = data.apply(
-        pattern.bearish_bb_reversal, axis=1, 
-        args=[data["BB_Upper_16_2"]]
-        )
     data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
     data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
     data["S_R"] = data.apply(pattern.support_resistance, axis=1)
     data["BBU_BO"] = data.apply(pattern.bb_upper_breakout, axis=1, args=[8])
     data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8])
+    data["Bull_BBR"] = data.apply(
+        pattern.bullish_bb_reversal, axis=1, 
+        args=[
+            data["BB_Lower_16_2"], data["RSI"], data["RSI_DVG"], 
+            data["SMA32_Slope"], data["BBL_BO"]
+            ]
+        ) 
+    data["Bear_BBR"] = data.apply(
+        pattern.bearish_bb_reversal, axis=1, 
+        args=[
+            data["BB_Upper_16_2"], data["RSI"], data["RSI_DVG"],
+            data["SMA32_Slope"], data["BBU_BO"]
+            ]
+        )
     return data
 
 
 if __name__ == '__main__':
     #get data
     PATH = "./output"
-    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -121,12 +132,12 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 100
 
     # Print patterns
-    print(data['2026-03-10 17:15':'2026-03-11 16:45'][[ 
+    print(data['2026-02-19 17:15':'2026-02-20 16:45'][[ 
     "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
     "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
-    "BBU_BO", "BBL_BO"
+    "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     ]])
 
     # output feature enhanced price data to csv
-    # data.to_csv(f"{PATH}/FE_{FILE}")
+    data.to_csv(f"{PATH}/FE_v2_{FILE}")
