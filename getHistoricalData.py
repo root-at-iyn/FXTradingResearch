@@ -22,7 +22,12 @@ def waitForHistoricalData(app: IBClient):
     print(f"Received {len(app.data)} rows")
     return len(app.data)
 
-def getFXHistoricalData(app: IBClient, fx_contract: Contract):
+def getFXHistoricalData(
+        app: IBClient, 
+        fx_contract: Contract, 
+        end_date_ts: str = "20260312 17:00:00 US/Eastern", 
+        freq: str = "1 Y"
+        ):
     """
     Request historical data from IBKR for the specified contract.
     Return a pandas data frame indexed by date.
@@ -31,8 +36,8 @@ def getFXHistoricalData(app: IBClient, fx_contract: Contract):
     app.reqHistoricalData(
         app.nextId(), 
         fx_contract, 
-        "20260312 17:00:00 US/Eastern", 
-        "1 D", 
+        end_date_ts, 
+        freq, 
         "15 mins", 
         "MIDPOINT", 
         1, # Use RTH
@@ -57,6 +62,10 @@ def getEarliestDataTimestamp(app: IBClient, contract: Contract):
 
 
 if __name__ == '__main__':
+
+    PATH = "./output"
+    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+
     mycontract = Contract()
     mycontract.symbol = "GBP"
     mycontract.secType = "CASH"
@@ -65,4 +74,10 @@ if __name__ == '__main__':
     
     app = IBClient()
     app.ibapiConnect()
-    getFXHistoricalData(app, mycontract)
+    price_df: DataFrame = getFXHistoricalData(
+        app, 
+        mycontract, 
+        end_date_ts="20260312 17:00:00 US/Eastern"
+        )
+    
+    price_df.to_csv(f"{PATH}/{FILE}")
