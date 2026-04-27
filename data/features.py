@@ -1,4 +1,4 @@
-from pandas import Series, DataFrame, to_datetime
+from pandas import Series, DataFrame, DatetimeIndex, to_datetime
 from datetime import time
 from math import sqrt, atan, pi
 
@@ -68,7 +68,7 @@ class Intraday():
         self.dhigh = 0
         self.dlow = 0
 
-    def index(self, df: Series, hr=17, min=15):
+    def index(self, df: Series, dt_index: DatetimeIndex, hr=16, min=45):
         """Returns the intraday index
 
         Takes in a DatetimeIndexed Series and specified time to set as the 
@@ -78,13 +78,13 @@ class Intraday():
         Returns the intraday index relative to the start of the trading session
         """
 
-        # access row of series with row.name
-        idx_time = to_datetime(df.name).time()
-        roll = time(hour=hr,minute=min)
-        if idx_time == roll:
-            self.index_count = 0
-        else:
-            self.index_count += 1
+        idx = int(df["Idx"])
+        EOD_time = time(hour=hr,minute=min)
+        if idx > 0:
+            if dt_index[idx-1].time() == EOD_time:
+                self.index_count = 0
+            else:
+                self.index_count += 1   
         return self.index_count
 
     def high(self, df: Series):

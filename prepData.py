@@ -24,7 +24,7 @@ def apply_features(data: pd.DataFrame):
     
     #add intraday properties
     intraday = Intraday()
-    data["Iday_Idx"] = data.apply(intraday.index, axis=1)
+    data["Iday_Idx"] = data.apply(intraday.index, axis=1, args=[data.index])
     data["Iday_High"] = data.apply(intraday.high, axis=1)
     data["Iday_Low"] = data.apply(intraday.low, axis=1)
     data["Iday_Range"] = data.apply(intraday.range, axis=1)
@@ -121,7 +121,7 @@ def apply_features(data: pd.DataFrame):
 if __name__ == '__main__':
     #get data
     PATH = "./output"
-    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -132,8 +132,8 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 100
 
     # Print patterns
-    print(data['2026-02-19 17:15':'2026-02-20 16:45'][[ 
-    "Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
+    print(data['2025-04-18 16:30':'2025-04-20 21:00'][[ 
+    "Iday_Idx","Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
     "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
     "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
     "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
