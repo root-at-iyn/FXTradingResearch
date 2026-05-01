@@ -52,6 +52,7 @@ def apply_features(data: pd.DataFrame):
         axis=1, 
         args=[2, "SMA16"]
         )
+    data["Close_%SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
     data["RSI"] = data.apply((indicator.rsi), axis=1)
     data["RSI_DVG"] = data.apply(
         indicator.rsi_divergence, 
@@ -72,6 +73,10 @@ def apply_features(data: pd.DataFrame):
         indicator.sma_trend, 
         axis=1, 
         args=["SMA4","SMA16","SMA32"]
+        )
+    data["SMA4_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA4"]]
         )
     data["SMA16_Slope"] = data.apply(
         indicator.sma_slope, axis=1, 
@@ -105,14 +110,15 @@ def apply_features(data: pd.DataFrame):
         pattern.bullish_bb_reversal, axis=1, 
         args=[
             data["BB_Lower_16_2"], data["RSI"], data["RSI_DVG"], 
-            data["SMA32_Slope"], data["BBL_BO"]
+            data["SMA32_Slope"], data["BBL_BO"], data["ATR"]
             ]
         ) 
     data["Bear_BBR"] = data.apply(
         pattern.bearish_bb_reversal, axis=1, 
         args=[
-            data["BB_Upper_16_2"], data["RSI"], data["RSI_DVG"],
-            data["SMA32_Slope"], data["BBU_BO"]
+            data["BB_Upper_16_2"], data["ATR"], data["SMA16_Slope"],
+            data["RSI"], data["RSI_DVG"],
+            data["Close_%High"], data["BBU_BO"], data["SMA32_Slope"]
             ]
         )
     return data
@@ -121,7 +127,7 @@ def apply_features(data: pd.DataFrame):
 if __name__ == '__main__':
     #get data
     PATH = "./output"
-    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)

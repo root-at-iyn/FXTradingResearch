@@ -222,6 +222,15 @@ class Indicator():
         std = self.sma_standard_deviation(df, sma_col_name, n)
         if std is not None:
             return df[sma_col_name] - std * k
+    
+    def close_pct_sma(
+            self,
+            df,   
+            sma_col_name: str = "SMA16"
+            ):
+        """Return percentage distance of the Close price from the SMA"""
+        pct_sma = (df["Close"] - df[sma_col_name]) / df[sma_col_name] * 100
+        return pct_sma
 
     def rsi(self, df: Series, period: int = 16):
         """
@@ -526,96 +535,61 @@ class Pattern():
             rsi: Series,
             rsi_divergence: Series, 
             sma32_slope: Series,
-            bbl_bo: Series
+            bbl_bo: Series,
+            atr: Series
             ):
         """
-        Returns a boolean on whether a bearish bollinger band reversal occured
+        Returns a boolean on whether a bullish bollinger band reversal occured
         """
 
         idx = int(df["Idx"])
-        if idx > 0:
+        if idx > 0 and df["ADR"] > 0:
             prev_open = self.open.iloc[idx-1]
             prev_close = self.close.iloc[idx-1]
-            bullish_candles = [
-                df["Hammer"], df["Shooting_Star"], 
-                df["Bull_Engulf"], df["Piercing"]
-                ]
             # base signal condition
             if self.current_bar(df) ==1 and prev_close < prev_open \
                 and prev_close < bb_lower.iloc[idx-1] \
-                and df["Body"] > (prev_open - prev_close) * 0.25 \
-                and df["Close_%High"] < 0.5:
-                # case 1 (RSI < 30)
-                if rsi.iloc[idx-1] <= 30:
-                    return True 
-                # case 2 (SMA32 > 15)
-                elif bbl_bo.iloc[idx-1] == True \
-                    and sma32_slope.iloc[idx-1] > 15:
-                    return True
-                # case 3 (SMA32 < 15 and RSI_DVG == True)
-                elif bbl_bo.iloc[idx-1] == True \
-                    and rsi_divergence.iloc[idx-1] == True \
-                    or df["RSI_DVG"] == True:
-                    return True
-            # case 4 (bullish candles and RSI < 30 or RSI_DVG == True)
-            elif bbl_bo.iloc[idx-1] == True \
-            and any(bullish_candles):
-                if (rsi_divergence.iloc[idx-1] == True \
-                 or rsi_divergence.iloc[idx] == True):
-                    return True
-                elif df["RSI"] <= 30:
-                    return True
-                elif sma32_slope.iloc[idx-1] > 15:
-                    return True
+                and df["Range"] > (prev_open - prev_close) * 0.50 \
+                and df["Close_%High"] <= 0.5 \
+                and self.range.iloc[idx-1] > atr.iloc[idx-1]:
+                #and bbl_bo.iloc[idx-1] == True:
+                return True
+
 
     def bearish_bb_reversal(
             self, 
             df:Series, 
-            bb_upper: Series, 
+            bb_upper: Series,
+            atr: Series, 
+            sma16_slope: Series,
             rsi: Series,
-            rsi_divergence: Series, 
-            sma32_slope: Series,
-            bbu_bo: Series
+            rsi_dvg: Series,
+            close_pct_high: Series,
+            bbu_bo: Series,
+            sma32_slope: Series
             ):
         """
         Returns a boolean on whether a bearish bollinger band reversal occured
         """
 
         idx = int(df["Idx"])
-        if idx > 0:
+        if idx > 0 and df["ADR"] > 0:
             prev_open = self.open.iloc[idx-1]
             prev_close = self.close.iloc[idx-1]
-            bearish_candles = [
-                df["Hammer"], df["Shooting_Star"], 
-                df["Bear_Engulf"], df["Dark_Cloud"]
-                ]
             # base signal condition
             if self.current_bar(df) ==-1 and prev_close > prev_open \
                 and prev_close > bb_upper.iloc[idx-1] \
-                and df["Body"] > (prev_close - prev_open) * 0.25 \
-                and df["Close_%High"] > 0.5:
-                # case 1 (RSI > 70)
-                if rsi.iloc[idx-1] >= 70:
-                    return True 
-                # case 2 (SMA32 < 15)
-                elif bbu_bo.iloc[idx-1] == True \
-                    and sma32_slope.iloc[idx-1] < 15:
+                and (df["Range"] > (prev_close - prev_open) * 0.50 \
+                and df["Close_%High"] >= 0.50) \
+                and self.range.iloc[idx-1] > atr.iloc[idx-1]:
+                #and bbu_bo.iloc[idx-1] == True:
                     return True
-                # case 3 (SMA32 > 15 and RSI_DVG == True)
-                elif bbu_bo.iloc[idx-1] == True \
-                    and rsi_divergence.iloc[idx-1] == True \
-                    or df["RSI_DVG"] == True:
-                    return True
-            # case 4 (bearish candles and RSI > 70 or RSI_DVG == True)
-            elif bbu_bo.iloc[idx-1] == True \
-            and any(bearish_candles):
-                if (rsi_divergence.iloc[idx-1] == True \
-                 or rsi_divergence.iloc[idx] == True):
-                    return True
-                elif df["RSI"] >= 70:
-                    return True
-                elif sma32_slope.iloc[idx-1] < 15:
-                    return True
+            # # case 3 (bb_upper test in downtrend)
+            # elif sma16_slope.iloc[idx] < 0 \
+            #     and df["High"] > bb_upper.iloc[idx] \
+            #     and df["Close"] < bb_upper.iloc[idx]:
+            #         return True
+
 
     def intraday_low_reversal(self, df: Series):
         """
@@ -685,8 +659,7 @@ class Pattern():
             if self.current_bar(df) == 1 and df["Close"] > df[bb_upper]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
                 and df["Close_%High"] < 0.5 \
-                and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.20 \
-                and df["Body"] > max_range:
+                and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.20:
                     return True
 
     def bb_lower_breakout(
