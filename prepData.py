@@ -19,8 +19,8 @@ def apply_features(data: pd.DataFrame):
     data["Range"] = data.apply(candle.range, axis=1)
     data["UWick"] = data.apply(candle.upper_wick, axis=1)
     data["LWick"] = data.apply(candle.lower_wick, axis=1)
-    data["Close_%High"] = data.apply(candle.close_pct_high, axis=1)
-    data["Open_%High"] = data.apply(candle.open_pct_high, axis=1)
+    data["Close_Pct_High"] = data.apply(candle.close_pct_high, axis=1)
+    data["Open_Pct_High"] = data.apply(candle.open_pct_high, axis=1)
     
     #add intraday properties
     intraday = Intraday()
@@ -28,8 +28,8 @@ def apply_features(data: pd.DataFrame):
     data["Iday_High"] = data.apply(intraday.high, axis=1)
     data["Iday_Low"] = data.apply(intraday.low, axis=1)
     data["Iday_Range"] = data.apply(intraday.range, axis=1)
-    data["Close_%DHigh"] = data.apply(intraday.close_pct_iday_high, axis=1)
-    data["Open_%DHigh"] = data.apply(intraday.open_pct_iday_high, axis=1)
+    data["Close_Pct_DHigh"] = data.apply(intraday.close_pct_iday_high, axis=1)
+    data["Open_Pct_DHigh"] = data.apply(intraday.open_pct_iday_high, axis=1)
 
     #add indicators
     indicator = Indicator()
@@ -52,7 +52,7 @@ def apply_features(data: pd.DataFrame):
         axis=1, 
         args=[2, "SMA16"]
         )
-    data["Close_%SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
+    data["Close_Pct_SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
     data["RSI"] = data.apply((indicator.rsi), axis=1)
     data["RSI_DVG"] = data.apply(
         indicator.rsi_divergence, 
@@ -93,7 +93,8 @@ def apply_features(data: pd.DataFrame):
         data["High"],
         data["Low"],
         data["Close"], 
-        data["Range"]
+        data["Range"],
+        data["Body"]
         )
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
@@ -118,15 +119,29 @@ def apply_features(data: pd.DataFrame):
         args=[
             data["BB_Upper_16_2"], data["ATR"], data["SMA16_Slope"],
             data["RSI"], data["RSI_DVG"],
-            data["Close_%High"], data["BBU_BO"], data["SMA32_Slope"]
+            data["Close_Pct_High"], data["BBU_BO"], data["SMA32_Slope"]
             ]
         )
+    
+    data["Bear_BBR_C1"] = data.apply(
+        pattern.bearish_bb_reversal_c1,
+        axis=1,
+        args=[data["BB_Upper_16_2"], data["SMA_Trend"]]
+    )
+
+    data["Bull_BBR_C1"] = data.apply(
+        pattern.bullish_bb_reversal_c1,
+        axis=1,
+        args=[data["BB_Lower_16_2"], data["SMA_Trend"]]
+    )
+
     return data
 
 
 if __name__ == '__main__':
     #get data
     PATH = "./output"
+    OUT_PATH = "./research/price_data"
     FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
@@ -138,12 +153,24 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 100
 
     # Print patterns
-    print(data['2025-04-18 16:30':'2025-04-20 21:00'][[ 
-    "Iday_Idx","Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
-    "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
-    "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
-    "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
-    ]])
+    # print(data['2025-04-18 16:30':'2025-04-20 21:00'][[ 
+    # "Iday_Idx","Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
+    # "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
+    # "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
+    # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
+    # ]])
+
+    # print(data.query("Bear_BBR_C1 == True"))
+    # print(data[[
+    #     "Iday_Range", "ADR", "SMA32_Slope", "Sig_High", "Close_Pct_DHigh", 
+    #     "Bear_BBR_C1", "IHR", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
+    #     ].query("Bear_BBR_C1 == True").tail(50))
+
+    print(data.query("Bull_BBR_C1 == True"))
+    print(data[[
+        "Iday_Range", "ADR", "Sig_Low", "Close_Pct_DHigh", "SMA_Trend",
+        "Bull_BBR_C1", "ILR", "Hammer", "Bull_Engulf", "Piercing"]
+        ].query("Bull_BBR_C1 == True").tail(50))
 
     # output feature enhanced price data to csv
-    data.to_csv(f"{PATH}/FE_v2_{FILE}")
+    # data.to_csv(f"{OUT_PATH}/FE_{FILE}")

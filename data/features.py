@@ -426,13 +426,15 @@ class Pattern():
     """Class for custom chart patterns"""
     def __init__(
             self, 
-            open: Series, high: Series, low: Series, close: Series, range: Series
+            open: Series, high: Series, low: Series, close: Series, 
+            range: Series, body: Series
             ) -> None:
         self.open = open
         self.high = high
         self.low = low 
         self.close = close
         self.range = range
+        self.body = body
 
     def current_bar(self, df: Series):
         return 1 if df["Close"] > df["Open"] else \
@@ -443,12 +445,12 @@ class Pattern():
 
         if self.current_bar(df) == 1:
             if (df["LWick"] >= (df["Body"] * 2)) \
-                and (df["Close_%High"] <= 0.34) \
+                and (df["Close_Pct_High"] <= 0.34) \
                 and df["Body"] > df["UWick"]:
                 return True
         elif self.current_bar(df) == -1:
             if (df["LWick"] >= (df["Body"] * 2)) \
-                and (df["Close_%High"] <= 0.34) \
+                and (df["Close_Pct_High"] <= 0.34) \
                 and df["Body"] > df["UWick"]:
                 return True
     
@@ -456,11 +458,11 @@ class Pattern():
         """Returns a boolean on whether a shooting star pattern occured"""
         if  df["UWick"] >= 2 * df["Body"]:
             if self.current_bar(df) == -1: 
-                if df["Close_%High"] >= 0.66 \
+                if df["Close_Pct_High"] >= 0.66 \
                     and df["Body"] > df["LWick"]:
                     return True
             elif self.current_bar(df) == 1:
-                if df["Close_%High"] >= 0.66 \
+                if df["Close_Pct_High"] >= 0.66 \
                 and df["Body"] > df["LWick"]:
                     return True
             
@@ -550,7 +552,7 @@ class Pattern():
             if self.current_bar(df) ==1 and prev_close < prev_open \
                 and prev_close < bb_lower.iloc[idx-1] \
                 and df["Range"] > (prev_open - prev_close) * 0.50 \
-                and df["Close_%High"] <= 0.5 \
+                and df["Close_Pct_High"] <= 0.5 \
                 and self.range.iloc[idx-1] > atr.iloc[idx-1]:
                 #and bbl_bo.iloc[idx-1] == True:
                 return True
@@ -580,7 +582,7 @@ class Pattern():
             if self.current_bar(df) ==-1 and prev_close > prev_open \
                 and prev_close > bb_upper.iloc[idx-1] \
                 and (df["Range"] > (prev_close - prev_open) * 0.50 \
-                and df["Close_%High"] >= 0.50) \
+                and df["Close_Pct_High"] >= 0.50) \
                 and self.range.iloc[idx-1] > atr.iloc[idx-1]:
                 #and bbu_bo.iloc[idx-1] == True:
                     return True
@@ -590,6 +592,107 @@ class Pattern():
             #     and df["Close"] < bb_upper.iloc[idx]:
             #         return True
 
+    def bearish_bb_reversal_c1(
+            self,
+            df: Series,
+            bbu: Series,
+            sma_trend: Series,
+            period: int = 8
+            ):
+        """
+        Bearish BBR Case 1 (Range Day)
+        Rejection of Intraday High
+        """
+        idx = int(df["Idx"])
+        if df["ADR"] > 0 and df["Sig_High"] > 0:
+            if self.open.iloc[idx-1] < bbu.iloc[idx-1] \
+            and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
+            and self.open.iloc[idx-1] < self.close.iloc[idx-1] \
+            and df["Open"] > df["BB_Upper_16_2"] \
+            and df["Close"] < df["BB_Upper_16_2"] \
+            and sma_trend.iloc[idx-period:idx].min() < 2 \
+            and df["Close_Pct_DHigh"] < 0.50 \
+            and (self.close.iloc[idx-1] - df["Close"]) > \
+                self.body.iloc[idx-1] * 0.66:
+                # Open > BBU + Close above Sig_High
+                if df["Close"] > df["Sig_High"]:
+                    return True
+                # Open > BBU + Close below through Sig_High
+                elif df["Close"] < df["Sig_High"] \
+                and df["Open"] > df["Sig_High"]:
+                    return True
+            # Open < BBU + High > BBU + Close through Sig_High
+            elif df["High"] > df["BB_Upper_16_2"] \
+            and df["Close"] < df["BB_Upper_16_2"] \
+            and df["Open"] > df["Sig_High"] \
+            and df["Close"] < df["Sig_High"] \
+            and sma_trend.iloc[idx-period:idx].min() < 2 \
+            and df["Close_Pct_DHigh"] < 0.50 \
+            and df["Close_Pct_High"] > 0.66:
+                return True
+            # Open < BBU & Sig_High + High > Sig_High & Close < BBU
+            elif df["High"] > df["BB_Upper_16_2"] \
+            and df["Close"] < df["BB_Upper_16_2"] \
+            and df["Open"] < df["Sig_High"] \
+            and df["Close"] < df["Sig_High"] \
+            and df["High"] == df["Iday_High"] \
+            and (self.current_bar(df) == -1 or df["Shooting_Star"] == True) \
+            and sma_trend.iloc[idx-period:idx].min() < 2 \
+            and df["Close_Pct_DHigh"] < 0.50 \
+            and df["Close_Pct_High"] > 0.66:
+                return True                    
+
+
+    def bullish_bb_reversal_c1(
+            self,
+            df: Series,
+            bbl: Series,
+            sma_trend: Series,
+            period: int = 8
+            ):
+        """
+        Bullish BBR Case 1 (Range Day)
+        Rejection of Intraday Low
+        """
+        idx = int(df["Idx"])
+        if df["ADR"] > 0 and df["Sig_Low"] > 0:
+            if self.open.iloc[idx-1] > bbl.iloc[idx-1] \
+            and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
+            and self.open.iloc[idx-1] > self.close.iloc[idx-1] \
+            and df["Open"] < df["BB_Lower_16_2"] \
+            and df["Close"] > df["BB_Lower_16_2"] \
+            and sma_trend.iloc[idx-period:idx].max() > -2 \
+            and df["Close_Pct_DHigh"] > 0.50 \
+            and df["Close"] - self.close.iloc[idx-1] > \
+            self.body.iloc[idx-1] * 0.66:
+                # Open < BBL + Close < SigLow
+                if df["Close"] < df["Sig_Low"]:
+                    return True
+                # Open < BBL + Close up through Sig_Low
+                elif df["Close"] > df["Sig_Low"] \
+                and df["Open"] < df["Sig_Low"]:
+                    return True
+            # Open > BBL + Low < BBL + Close through Sig_Low
+            elif df["Low"] < df["BB_Lower_16_2"] \
+            and df["Close"] > df["BB_Lower_16_2"] \
+            and df["Open"] < df["Sig_Low"] \
+            and df["Close"] > df["Sig_Low"] \
+            and sma_trend.iloc[idx-period:idx].max() > -2 \
+            and df["Close_Pct_DHigh"] > 0.50 \
+            and df["Close_Pct_High"] < 0.34:
+                return True
+            # Open > BBL & Sig_Low + Low < Sig_Low & Close > BBU
+            elif df["Low"] < df["BB_Lower_16_2"] \
+            and df["Close"] > df["BB_Lower_16_2"] \
+            and df["Open"] > df["Sig_Low"] \
+            and df["Close"] > df["Sig_Low"] \
+            and df["Low"] == df["Iday_Low"] \
+            and (self.current_bar(df) == 1 or df["Hammer"] == True) \
+            and sma_trend.iloc[idx-period:idx].max() > -2 \
+            and df["Close_Pct_DHigh"] > 0.50 \
+            and df["Close_Pct_High"] < 0.34:
+                return True
+            
 
     def intraday_low_reversal(self, df: Series):
         """
@@ -658,7 +761,7 @@ class Pattern():
             max_range = max(self.range.iloc[idx-period:idx])
             if self.current_bar(df) == 1 and df["Close"] > df[bb_upper]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
-                and df["Close_%High"] < 0.5 \
+                and df["Close_Pct_High"] < 0.5 \
                 and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.20:
                     return True
 
@@ -673,7 +776,7 @@ class Pattern():
             max_range = max(self.range.iloc[idx-period:idx])
             if self.current_bar(df) == -1 and df["Close"] < df[bb_lower]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
-                and df["Close_%High"] > 0.5 \
+                and df["Close_Pct_High"] > 0.5 \
                 and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.20 \
                 and df["Body"] > max_range:
                     return True
