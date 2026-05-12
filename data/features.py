@@ -209,7 +209,7 @@ class Indicator():
         """
         std = self.sma_standard_deviation(df, sma_col_name, n)
         if std is not None:
-            return df[sma_col_name] + std * k
+            return df[sma_col_name] + (std * k)
 
     def bollinger_band_lower(
             self, df: Series, k: int, sma_col_name: str, n: int = 16
@@ -604,30 +604,33 @@ class Pattern():
         Rejection of Intraday High
         """
         idx = int(df["Idx"])
-        if df["ADR"] > 0 and df["Sig_High"] > 0:
+        if df["ADR"] > 0 and df["Sig_High"] > 0 \
+        and sma_trend.iloc[idx-period:idx].min() < 2 \
+        and df["Close_Pct_DHigh"] < 0.50:
+            # Open > BBU + Close below through Sig_High
             if self.open.iloc[idx-1] < bbu.iloc[idx-1] \
             and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
             and self.open.iloc[idx-1] < self.close.iloc[idx-1] \
             and df["Open"] > df["BB_Upper_16_2"] \
             and df["Close"] < df["BB_Upper_16_2"] \
-            and sma_trend.iloc[idx-period:idx].min() < 2 \
-            and df["Close_Pct_DHigh"] < 0.50 \
             and (self.close.iloc[idx-1] - df["Close"]) > \
-                self.body.iloc[idx-1] * 0.66:
-                # Open > BBU + Close above Sig_High
-                if df["Close"] > df["Sig_High"]:
-                    return True
-                # Open > BBU + Close below through Sig_High
-                elif df["Close"] < df["Sig_High"] \
-                and df["Open"] > df["Sig_High"]:
-                    return True
+            self.body.iloc[idx-1] * 0.66 \
+            and df["Close"] < df["Sig_High"] \
+            and df["Open"] > df["Sig_High"]:
+                return True
+            # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
+            elif df["Shooting_Star"] == True \
+            and df["Range"] > df["ATR"] * 1.25 \
+            and df["High"] > df["BB_Upper_16_2"] \
+            and df["Open"] < df["BB_Upper_16_2"] \
+            and df["Close"] < df["BB_Upper_16_2"] \
+            and df["Low"] > df["Sig_High"]:
+                return True
             # Open < BBU + High > BBU + Close through Sig_High
             elif df["High"] > df["BB_Upper_16_2"] \
             and df["Close"] < df["BB_Upper_16_2"] \
             and df["Open"] > df["Sig_High"] \
             and df["Close"] < df["Sig_High"] \
-            and sma_trend.iloc[idx-period:idx].min() < 2 \
-            and df["Close_Pct_DHigh"] < 0.50 \
             and df["Close_Pct_High"] > 0.66:
                 return True
             # Open < BBU & Sig_High + High > Sig_High & Close < BBU
@@ -636,12 +639,56 @@ class Pattern():
             and df["Open"] < df["Sig_High"] \
             and df["Close"] < df["Sig_High"] \
             and df["High"] == df["Iday_High"] \
-            and (self.current_bar(df) == -1 or df["Shooting_Star"] == True) \
-            and sma_trend.iloc[idx-period:idx].min() < 2 \
-            and df["Close_Pct_DHigh"] < 0.50 \
-            and df["Close_Pct_High"] > 0.66:
-                return True                    
+            and df["Range"] > df["ATR"]:
+                if self.current_bar(df) == -1 \
+                and (self.close.iloc[idx-1] - df["Close"]) > \
+                self.body.iloc[idx-1] * 0.66:
+                    return True
+                elif df["Shooting_Star"] == True:
+                    return True
 
+    def bearish_bb_reversal_c2(
+            self,
+            df: Series,
+            bbu_bo: Series,
+            bbu: Series,
+            atr: Series,
+            bbu_16_3: Series
+            ):
+        """
+        Bearish BBR Case 2 (Extended Run)
+        Price extension out of range
+        """
+        idx = int(df["Idx"])
+        # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
+        if df["ADR"] > 0 and df["Sig_High"] > 0:
+            if df["Range"] > df["ATR"] * 1.25 \
+            and df["High"] > df["BB_Upper_16_2"] \
+            and df["Low"] > df["Sig_High"]:
+                if df["RSI_DVG"] == True \
+                and df["Shooting_Star"] == True:
+                    return True
+                elif bbu_bo.iloc[idx-1] == True \
+                and df["Close_Pct_DHigh"] < 0.50 \
+                and df["Close"] < df["BB_Upper_16_2"] \
+                and (self.close.iloc[idx-1] - df["Close"]) > \
+                self.body.iloc[idx-1] * 0.66:
+                    return True
+        # Previous bar outside BBU
+        if self.open.iloc[idx-1] > bbu.iloc[idx-1] \
+        and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
+        and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+        and self.range.iloc[idx-1] > atr.iloc[idx-1] \
+        and df["Range"] > df["ATR"] \
+        and self.current_bar(df) == -1:
+            return True
+        # Current bar outside BBU
+        elif df["Open"] > df["BB_Upper_16_2"] \
+        and df["Close"] > df["BB_Upper_16_2"] \
+        and df["Range"] > df["ATR"] \
+        and df["Close_Pct_DHigh"] < 0.50 \
+        and self.current_bar(df) == -1:
+            return True
 
     def bullish_bb_reversal_c1(
             self,
@@ -655,30 +702,33 @@ class Pattern():
         Rejection of Intraday Low
         """
         idx = int(df["Idx"])
-        if df["ADR"] > 0 and df["Sig_Low"] > 0:
+        if df["ADR"] > 0 and df["Sig_Low"] > 0 \
+        and sma_trend.iloc[idx-period:idx].max() > -2 \
+        and df["Close_Pct_DHigh"] > 0.50:
+            # Open < BBL + Close up through Sig_Low
             if self.open.iloc[idx-1] > bbl.iloc[idx-1] \
             and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
             and self.open.iloc[idx-1] > self.close.iloc[idx-1] \
             and df["Open"] < df["BB_Lower_16_2"] \
             and df["Close"] > df["BB_Lower_16_2"] \
-            and sma_trend.iloc[idx-period:idx].max() > -2 \
-            and df["Close_Pct_DHigh"] > 0.50 \
             and df["Close"] - self.close.iloc[idx-1] > \
-            self.body.iloc[idx-1] * 0.66:
-                # Open < BBL + Close < SigLow
-                if df["Close"] < df["Sig_Low"]:
-                    return True
-                # Open < BBL + Close up through Sig_Low
-                elif df["Close"] > df["Sig_Low"] \
-                and df["Open"] < df["Sig_Low"]:
-                    return True
+            self.body.iloc[idx-1] * 0.66 \
+            and df["Close"] > df["Sig_Low"] \
+            and df["Open"] < df["Sig_Low"]:
+                return True
+            # Hammer reversal under Sig_Low & Low < BBL + Body above BBL
+            elif df["Low"] < df["BB_Lower_16_2"] \
+            and df["Open"] > df["BB_Lower_16_2"] \
+            and df["Close"] > df["BB_Lower_16_2"] \
+            and df["High"] < df["Sig_Low"] \
+            and df["Hammer"] \
+            and df["Range"] > df["ATR"] * 1.25:
+                return True
             # Open > BBL + Low < BBL + Close through Sig_Low
             elif df["Low"] < df["BB_Lower_16_2"] \
             and df["Close"] > df["BB_Lower_16_2"] \
             and df["Open"] < df["Sig_Low"] \
             and df["Close"] > df["Sig_Low"] \
-            and sma_trend.iloc[idx-period:idx].max() > -2 \
-            and df["Close_Pct_DHigh"] > 0.50 \
             and df["Close_Pct_High"] < 0.34:
                 return True
             # Open > BBL & Sig_Low + Low < Sig_Low & Close > BBU
@@ -687,11 +737,14 @@ class Pattern():
             and df["Open"] > df["Sig_Low"] \
             and df["Close"] > df["Sig_Low"] \
             and df["Low"] == df["Iday_Low"] \
-            and (self.current_bar(df) == 1 or df["Hammer"] == True) \
-            and sma_trend.iloc[idx-period:idx].max() > -2 \
-            and df["Close_Pct_DHigh"] > 0.50 \
-            and df["Close_Pct_High"] < 0.34:
-                return True
+            and df["Range"] > df["ATR"]:
+                if self.current_bar(df) == 1 and \
+                df["Close"] - self.close.iloc[idx-1] > \
+                self.body.iloc[idx-1] * 0.66:
+                    return True
+                # postive or negative shooting star
+                elif (df["Hammer"] == True ):
+                    return True
             
 
     def intraday_low_reversal(self, df: Series):

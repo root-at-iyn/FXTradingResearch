@@ -47,10 +47,20 @@ def apply_features(data: pd.DataFrame):
         axis=1, 
         args=[2, "SMA16"]
         )
+    data["BB_Upper_16_3"] = data.apply(
+        indicator.bollinger_band_upper, 
+        axis=1, 
+        args=[3, "SMA16"]
+        )
     data["BB_Lower_16_2"] = data.apply(
         indicator.bollinger_band_lower, 
         axis=1, 
         args=[2, "SMA16"]
+        )
+    data["BB_Lower_16_3"] = data.apply(
+        indicator.bollinger_band_lower, 
+        axis=1, 
+        args=[3, "SMA16"]
         )
     data["Close_Pct_SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
     data["RSI"] = data.apply((indicator.rsi), axis=1)
@@ -129,6 +139,13 @@ def apply_features(data: pd.DataFrame):
         args=[data["BB_Upper_16_2"], data["SMA_Trend"]]
     )
 
+    data["Bear_BBR_C2"] = data.apply(
+        pattern.bearish_bb_reversal_c2,
+        axis=1,
+        args=[data["BBU_BO"] ,data["BB_Upper_16_2"], 
+              data["ATR"], data["BB_Upper_16_3"]]
+    )
+
     data["Bull_BBR_C1"] = data.apply(
         pattern.bullish_bb_reversal_c1,
         axis=1,
@@ -166,11 +183,17 @@ if __name__ == '__main__':
     #     "Bear_BBR_C1", "IHR", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
     #     ].query("Bear_BBR_C1 == True").tail(50))
 
-    print(data.query("Bull_BBR_C1 == True"))
-    print(data[[
-        "Iday_Range", "ADR", "Sig_Low", "Close_Pct_DHigh", "SMA_Trend",
-        "Bull_BBR_C1", "ILR", "Hammer", "Bull_Engulf", "Piercing"]
-        ].query("Bull_BBR_C1 == True").tail(50))
+    #print(data.query("Bull_BBR_C1 == True"))
+    # print(data.query("Bull_BBR_C1 == True and Open < Sig_Low and Close < Sig_Low and Low < BB_Lower_16_2 and Close > BB_Lower_16_2").tail(50)[[
+    #     "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "BB_Lower_16_2", "SMA32_Slope", "SMA16_Slope",
+    #     "Bull_BBR_C1", "ILR", "Hammer", "Bull_Engulf", "Piercing"]
+    #     ])
+    
+    print(data.query("Bear_BBR_C2 == True"))
+    print(data.query("Bear_BBR_C2 == True").tail(100)[[
+        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "Sig_High", "BB_Upper_16_2", "BB_Upper_16_3", "SMA32_Slope", "SMA16_Slope",
+        "Bear_BBR_C2", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
+        ])
 
     # output feature enhanced price data to csv
     # data.to_csv(f"{OUT_PATH}/FE_{FILE}")
