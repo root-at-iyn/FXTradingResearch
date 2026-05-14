@@ -600,7 +600,7 @@ class Pattern():
             period: int = 8
             ):
         """
-        Bearish BBR Case 1 (Range Day)
+        Bearish BBR Case 1 (SigLevel Range)
         Rejection of Intraday High
         """
         idx = int(df["Idx"])
@@ -651,13 +651,10 @@ class Pattern():
             self,
             df: Series,
             bbu_bo: Series,
-            bbu: Series,
-            atr: Series,
-            bbu_16_3: Series
             ):
         """
         Bearish BBR Case 2 (Extended Run)
-        Price extension out of range
+        Price extension out of SigLevel range
         """
         idx = int(df["Idx"])
         # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
@@ -674,6 +671,18 @@ class Pattern():
                 and (self.close.iloc[idx-1] - df["Close"]) > \
                 self.body.iloc[idx-1] * 0.66:
                     return True
+        
+    def bearish_bb_reversal_c3(
+            self,
+            df: Series,
+            bbu: Series,
+            atr: Series,
+            ):
+        """
+        Bearish BBR Case 3 (Price Exhaustion)
+        Price open and close above Upper Band
+        """
+        idx = int(df["Idx"])
         # Previous bar outside BBU
         if self.open.iloc[idx-1] > bbu.iloc[idx-1] \
         and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
@@ -689,6 +698,28 @@ class Pattern():
         and df["Close_Pct_DHigh"] < 0.50 \
         and self.current_bar(df) == -1:
             return True
+
+    def bearish_bb_reversal_c4(
+            self,
+            df: Series,
+            bbu: Series
+            ):
+        """
+        Bearish BBR Case 4 (Mean Reversion)
+        Price extended > 0.10% of SMA16 & bar closes near Low
+        Occurs in Uptrend with positive SMA slopes
+        """
+        idx = int(df["Idx"])
+        if df["Close_Pct_DHigh"] < 0.25 \
+        and df["SMA_Trend"] == 2 \
+        and df["SMA16_Slope"] > 45 \
+        and df["SMA32_Slope"] > 30 \
+        and df["SMA16_Slope"] > df["SMA32_Slope"] \
+        and df["Close_Pct_SMA"] > 0.1 \
+        and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
+        and (df["Close_Pct_High"] > 0.66 or self.current_bar(df) == -1):
+            return True
+
 
     def bullish_bb_reversal_c1(
             self,
@@ -830,6 +861,5 @@ class Pattern():
             if self.current_bar(df) == -1 and df["Close"] < df[bb_lower]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
                 and df["Close_Pct_High"] > 0.5 \
-                and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.20 \
-                and df["Body"] > max_range:
+                and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.20:
                     return True

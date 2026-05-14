@@ -142,8 +142,17 @@ def apply_features(data: pd.DataFrame):
     data["Bear_BBR_C2"] = data.apply(
         pattern.bearish_bb_reversal_c2,
         axis=1,
-        args=[data["BBU_BO"] ,data["BB_Upper_16_2"], 
-              data["ATR"], data["BB_Upper_16_3"]]
+        args=[data["BBU_BO"]]
+    )
+    data["Bear_BBR_C3"] = data.apply(
+        pattern.bearish_bb_reversal_c3,
+        axis=1,
+        args=[data["BB_Upper_16_2"], data["ATR"]]
+    )
+    data["Bear_BBR_C4"] = data.apply(
+        pattern.bearish_bb_reversal_c4,
+        axis=1,
+        args=[data["BB_Upper_16_2"]]
     )
 
     data["Bull_BBR_C1"] = data.apply(
@@ -189,10 +198,16 @@ if __name__ == '__main__':
     #     "Bull_BBR_C1", "ILR", "Hammer", "Bull_Engulf", "Piercing"]
     #     ])
     
-    print(data.query("Bear_BBR_C2 == True"))
-    print(data.query("Bear_BBR_C2 == True").tail(100)[[
-        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "Sig_High", "BB_Upper_16_2", "BB_Upper_16_3", "SMA32_Slope", "SMA16_Slope",
-        "Bear_BBR_C2", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
+    # print(data.query("Bear_BBR_C3 == True"))
+    # print(data.query("Bear_BBR_C3 == True").tail(100)[[
+    #     "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "Sig_High", "BB_Upper_16_2", "BB_Upper_16_3", "SMA32_Slope", "SMA16_Slope",
+    #     "Bear_BBR_C2", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
+    #     ])
+    
+    print(data.query("Bear_BBR_C4 == True"))
+    print(data.query("Bear_BBR_C4 == True").tail(100)[[
+        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "BB_Upper_16_3", "RSI", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+        "Bear_BBR_C4", "RSI_DVG",]
         ])
 
     # output feature enhanced price data to csv
