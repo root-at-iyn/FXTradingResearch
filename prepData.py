@@ -154,6 +154,11 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Upper_16_2"]]
     )
+    data["Bear_BBR_C5"] = data.apply(
+        pattern.bearish_bb_reversal_c5, 
+        axis=1,
+        args=[data["BB_Upper_16_2"]]
+        )
 
     data["Bull_BBR_C1"] = data.apply(
         pattern.bullish_bb_reversal_c1,
@@ -168,7 +173,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -204,9 +209,15 @@ if __name__ == '__main__':
     #     "Bear_BBR_C2", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
     #     ])
     
-    print(data.query("Bear_BBR_C4 == True"))
-    print(data.query("Bear_BBR_C4 == True").tail(100)[[
-        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "BB_Upper_16_3", "RSI", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+    # print(data.query("Bear_BBR_C4 == True"))
+    # print(data.query("Bear_BBR_C4 == True").tail(100)[[
+    #     "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "BB_Upper_16_3", "RSI", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+    #     "Bear_BBR_C4", "RSI_DVG",]
+    #     ])
+    
+    print(data.query("Bear_BBR_C5 == True"))
+    print(data.query("Bear_BBR_C5 == True").tail(100)[[
+        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
         "Bear_BBR_C4", "RSI_DVG",]
         ])
 

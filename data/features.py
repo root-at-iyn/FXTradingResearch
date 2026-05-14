@@ -719,6 +719,25 @@ class Pattern():
         and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
         and (df["Close_Pct_High"] > 0.66 or self.current_bar(df) == -1):
             return True
+        
+    def bearish_bb_reversal_c5(
+            self,
+            df: Series,
+            bbu: Series
+            ):
+        """
+        Bearish BBR Case 5 (Trend Continuation)
+        """
+        idx = int(df["Idx"])
+        if df["SMA32_Slope"] < -10 \
+        and df["SMA32_Slope"] > -30 \
+        and df["SMA16_Slope"] < 10 \
+        and df["SMA32_Slope"] < df["SMA16_Slope"] \
+        and df["Close_Pct_DHigh"] > 0.50 \
+        and df["Close_Pct_SMA"] > 0.01 \
+        and df["High"] > df["BB_Upper_16_2"] \
+        and (self.current_bar(df) == -1):
+            return True 
 
 
     def bullish_bb_reversal_c1(
