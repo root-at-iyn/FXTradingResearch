@@ -738,6 +738,17 @@ class Pattern():
         and df["High"] > df["BB_Upper_16_2"] \
         and (self.current_bar(df) == -1):
             return True 
+        
+    def bearish_bb_reversal_v2(self, df:Series):
+        """All bearish reversal signals"""
+        signals = any([
+            df["Bear_BBR_C1"],
+            df["Bear_BBR_C2"],
+            df["Bear_BBR_C3"],
+            df["Bear_BBR_C4"],
+            df["Bear_BBR_C5"],
+        ])
+        return signals
 
 
     def bullish_bb_reversal_c1(
@@ -795,6 +806,47 @@ class Pattern():
                 # postive or negative shooting star
                 elif (df["Hammer"] == True ):
                     return True
+                
+    def bullish_bb_reversal_c2(
+            self,
+            df: Series,
+            bbl_bo: Series,
+            bbu: Series,
+            atr: Series,
+            rsi_dvg: Series
+            ):
+        """
+        Bullish BBR Case 2 (Extended Run)
+        Price extension out of SigLevel range
+        """
+        idx = int(df["Idx"])
+        if df["ADR"] > 0 and df["Sig_Low"] > 0:
+            if df["High"] < df["Sig_Low"] \
+            and df["Close_Pct_DHigh"] > 0.50 \
+            and any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
+            and self.open.iloc[idx-1] > bbu.iloc[idx-1] \
+            and self.close.iloc[idx-1] < bbu.iloc[idx-1] \
+            and self.range.iloc[idx-1] > atr.iloc[idx-1] \
+            and self.current_bar(df) == 1:
+                # Close back above BBL
+                if df["Close"] > df["BB_Lower_16_2"]:
+                    # Close 66% above prev body
+                    if df["Close"] - self.close.iloc[idx-1] > \
+                    self.body.iloc[idx-1] * 0.66:
+                        return True
+                    # Bullish candlstick 
+                    elif any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]):
+                        return True
+                    # 66% of candle body outside BBL
+                    elif (df["BB_Lower_16_2"] - df["Open"]) >  \
+                    df["Body"] * 0.66:
+                        return True
+                # Hammer negative bar close outside BBL
+                elif df["Open"] > df["BB_Lower_16_2"] \
+                and df["Close"] < df["BB_Lower_16_2"] \
+                and df["Hammer"] == True:
+                    return True
+
             
 
     def intraday_low_reversal(self, df: Series):

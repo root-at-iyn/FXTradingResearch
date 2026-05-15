@@ -159,11 +159,21 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Upper_16_2"]]
         )
+    
+    data["Bear_BBR_V2"] = data.apply(pattern.bearish_bb_reversal_v2, axis=1)
 
     data["Bull_BBR_C1"] = data.apply(
         pattern.bullish_bb_reversal_c1,
         axis=1,
         args=[data["BB_Lower_16_2"], data["SMA_Trend"]]
+    )
+    data["Bull_BBR_C2"] = data.apply(
+        pattern.bullish_bb_reversal_c2,
+        axis=1,
+        args=[
+            data["BBL_BO"], data["BB_Lower_16_2"], 
+            data["ATR"], data["RSI_DVG"]
+            ]
     )
 
     return data
@@ -173,7 +183,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -197,29 +207,18 @@ if __name__ == '__main__':
     #     "Bear_BBR_C1", "IHR", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
     #     ].query("Bear_BBR_C1 == True").tail(50))
 
-    #print(data.query("Bull_BBR_C1 == True"))
-    # print(data.query("Bull_BBR_C1 == True and Open < Sig_Low and Close < Sig_Low and Low < BB_Lower_16_2 and Close > BB_Lower_16_2").tail(50)[[
-    #     "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "BB_Lower_16_2", "SMA32_Slope", "SMA16_Slope",
-    #     "Bull_BBR_C1", "ILR", "Hammer", "Bull_Engulf", "Piercing"]
-    #     ])
-    
-    # print(data.query("Bear_BBR_C3 == True"))
-    # print(data.query("Bear_BBR_C3 == True").tail(100)[[
-    #     "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "Sig_High", "BB_Upper_16_2", "BB_Upper_16_3", "SMA32_Slope", "SMA16_Slope",
-    #     "Bear_BBR_C2", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
-    #     ])
-    
-    # print(data.query("Bear_BBR_C4 == True"))
-    # print(data.query("Bear_BBR_C4 == True").tail(100)[[
-    #     "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "BB_Upper_16_3", "RSI", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
-    #     "Bear_BBR_C4", "RSI_DVG",]
-    #     ])
-    
-    print(data.query("Bear_BBR_C5 == True"))
-    print(data.query("Bear_BBR_C5 == True").tail(100)[[
-        "Iday_Range", "ADR", "Open","High", "Low", "Close", "Range", "ATR", "BB_Upper_16_2", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
-        "Bear_BBR_C4", "RSI_DVG",]
+    print(data.query("Bull_BBR_C2 == True"))
+    print(data.query("Bull_BBR_C2 == True").tail(50)[[
+        "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "RSI_DVG", "BB_Lower_16_2",
+        "ILR", "Hammer", "Bull_Engulf", "Piercing"]
         ])
+    
+    
+    # print(data.query("Bear_BBR_V2 == True"))
+    # print(data.query("Bear_BBR_V2 == True").tail(100)[[
+    #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+    #     "Bear_BBR_C1", "Bear_BBR_C2", "Bear_BBR_C3", "Bear_BBR_C4", "Bear_BBR_C5"]
+    #     ])
 
     # output feature enhanced price data to csv
     # data.to_csv(f"{OUT_PATH}/FE_{FILE}")
