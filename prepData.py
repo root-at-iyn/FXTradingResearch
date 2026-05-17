@@ -142,7 +142,8 @@ def apply_features(data: pd.DataFrame):
     data["Bear_BBR_C2"] = data.apply(
         pattern.bearish_bb_reversal_c2,
         axis=1,
-        args=[data["BBU_BO"]]
+        args=[data["RSI"], data["BB_Upper_16_2"], 
+              data["ATR"], data["RSI_DVG"]]
     )
     data["Bear_BBR_C3"] = data.apply(
         pattern.bearish_bb_reversal_c3,
@@ -171,7 +172,7 @@ def apply_features(data: pd.DataFrame):
         pattern.bullish_bb_reversal_c2,
         axis=1,
         args=[
-            data["BBL_BO"], data["BB_Lower_16_2"], 
+            data["RSI"], data["BB_Lower_16_2"], 
             data["ATR"], data["RSI_DVG"]
             ]
     )
@@ -201,11 +202,11 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    # print(data.query("Bear_BBR_C1 == True"))
-    # print(data[[
-    #     "Iday_Range", "ADR", "SMA32_Slope", "Sig_High", "Close_Pct_DHigh", 
-    #     "Bear_BBR_C1", "IHR", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
-    #     ].query("Bear_BBR_C1 == True").tail(50))
+    # print(data.query("Bear_BBR_C2 == True"))
+    # print(data.query("Bear_BBR_C2 == True and RSI_DVG != True").tail(50)[[
+    #     "Iday_Range", "ADR", "Sig_High", "Close_Pct_DHigh", 
+    #     "RSI", "RSI_DVG", "Shooting_Star", "Bear_Engulf", "Dark_Cloud"]
+    #     ])
 
     print(data.query("Bull_BBR_C2 == True"))
     print(data.query("Bull_BBR_C2 == True").tail(50)[[

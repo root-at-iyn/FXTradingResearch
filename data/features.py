@@ -650,7 +650,10 @@ class Pattern():
     def bearish_bb_reversal_c2(
             self,
             df: Series,
-            bbu_bo: Series,
+            rsi: Series,
+            bbu: Series,
+            atr: Series,
+            rsi_dvg: Series
             ):
         """
         Bearish BBR Case 2 (Extended Run)
@@ -659,17 +662,42 @@ class Pattern():
         idx = int(df["Idx"])
         # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
         if df["ADR"] > 0 and df["Sig_High"] > 0:
-            if df["Range"] > df["ATR"] * 1.25 \
-            and df["High"] > df["BB_Upper_16_2"] \
-            and df["Low"] > df["Sig_High"]:
-                if df["RSI_DVG"] == True \
-                and df["Shooting_Star"] == True:
-                    return True
-                elif bbu_bo.iloc[idx-1] == True \
-                and df["Close_Pct_DHigh"] < 0.50 \
+            if df["Low"] > df["Sig_High"] \
+            and df["Close_Pct_DHigh"] < 0.50:
+                # Bearish Divergence
+                if any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
+                and self.open.iloc[idx-1] < bbu.iloc[idx-1] \
+                and self.high.iloc[idx-1] > bbu.iloc[idx-1] \
+                and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+                and self.range.iloc[idx-1] > atr.iloc[idx-1] \
+                and self.current_bar(df) == -1:
+                    if df["Close"] < df["BB_Upper_16_2"]:
+                        # Close 66% of prev body
+                        if self.close.iloc[idx-1] - df["Close"] > \
+                        self.body.iloc[idx-1] * 0.66:
+                            return True
+                        # bearish candlestick
+                        elif any([
+                            df["Shooting_Star"], df["Dark_Cloud"], 
+                            df["Bear_Engulf"], df["Hammer"],
+                            ]):
+                            return True
+                        # candle body 66% outside of BBU
+                        elif (df["Close"] - df["BB_Upper_16_2"]) > \
+                        df["Body"] * 0.66:
+                            return True
+                    # positive shooting star outside of band
+                    if df["Close"] > df["BB_Upper_16_2"] \
+                    and df["Open"] < df["BB_Upper_16_2"] \
+                    and df["Shooting_Star"] == True:
+                        return True
+                # No divergence
+                elif rsi.iloc[idx-1] > 70 \
+                and self.open.iloc[idx-1] < bbu.iloc[idx-1] \
+                and self.close[idx-1] > bbu.iloc[idx-1] \
+                and df["RSI"] < 70 \
                 and df["Close"] < df["BB_Upper_16_2"] \
-                and (self.close.iloc[idx-1] - df["Close"]) > \
-                self.body.iloc[idx-1] * 0.66:
+                and self.current_bar(df) == -1:
                     return True
         
     def bearish_bb_reversal_c3(
@@ -810,8 +838,8 @@ class Pattern():
     def bullish_bb_reversal_c2(
             self,
             df: Series,
-            bbl_bo: Series,
-            bbu: Series,
+            rsi: Series,
+            bbl: Series,
             atr: Series,
             rsi_dvg: Series
             ):
@@ -822,29 +850,38 @@ class Pattern():
         idx = int(df["Idx"])
         if df["ADR"] > 0 and df["Sig_Low"] > 0:
             if df["High"] < df["Sig_Low"] \
-            and df["Close_Pct_DHigh"] > 0.50 \
-            and any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
-            and self.open.iloc[idx-1] > bbu.iloc[idx-1] \
-            and self.close.iloc[idx-1] < bbu.iloc[idx-1] \
-            and self.range.iloc[idx-1] > atr.iloc[idx-1] \
-            and self.current_bar(df) == 1:
-                # Close back above BBL
-                if df["Close"] > df["BB_Lower_16_2"]:
-                    # Close 66% above prev body
-                    if df["Close"] - self.close.iloc[idx-1] > \
-                    self.body.iloc[idx-1] * 0.66:
+            and df["Close_Pct_DHigh"] > 0.50:
+                # Bullish Divergence
+                if any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
+                and self.open.iloc[idx-1] > bbl.iloc[idx-1] \
+                and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
+                and self.range.iloc[idx-1] > atr.iloc[idx-1] \
+                and self.current_bar(df) == 1:
+                    # Close back above BBL
+                    if df["Close"] > df["BB_Lower_16_2"]:
+                        # Close 66% above prev body
+                        if df["Close"] - self.close.iloc[idx-1] > \
+                        self.body.iloc[idx-1] * 0.66:
+                            return True
+                        # Bullish candlstick 
+                        elif any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]):
+                            return True
+                        # 66% of candle body outside BBL
+                        elif (df["BB_Lower_16_2"] - df["Open"]) >  \
+                        df["Body"] * 0.66:
+                            return True
+                    # Hammer negative bar close outside BBL
+                    elif df["Open"] > df["BB_Lower_16_2"] \
+                    and df["Close"] < df["BB_Lower_16_2"] \
+                    and df["Hammer"] == True:
                         return True
-                    # Bullish candlstick 
-                    elif any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]):
-                        return True
-                    # 66% of candle body outside BBL
-                    elif (df["BB_Lower_16_2"] - df["Open"]) >  \
-                    df["Body"] * 0.66:
-                        return True
-                # Hammer negative bar close outside BBL
-                elif df["Open"] > df["BB_Lower_16_2"] \
-                and df["Close"] < df["BB_Lower_16_2"] \
-                and df["Hammer"] == True:
+                # No Divergence
+                elif rsi.iloc[idx-1] < 30 \
+                and self.open.iloc[idx-1] > bbl.iloc[idx-1] \
+                and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
+                and df["RSI"] > 30 \
+                and df["Close"] > df["BB_Lower_16_2"]\
+                and self.current_bar(df) == 1:
                     return True
 
             
