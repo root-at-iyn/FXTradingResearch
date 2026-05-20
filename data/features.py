@@ -726,8 +726,6 @@ class Pattern():
         and df["Range"] > df["ATR"]:
             return True
 
-            
-
     def bearish_bb_reversal_c4(
             self,
             df: Series,
@@ -889,31 +887,30 @@ class Pattern():
             self,
             df: Series,
             bbl: Series,
-            atr: Series,
-            rsi: Series
+            bbl_bo: Series,
             ):
         """
         Bullish BBR Case 3 (Price Exhaustion)
         Price open and close below Lower Band
         """
         idx = int(df["Idx"])
+        # Current bar outside BBL
+        if df["Open"] < df["BB_Lower_16_2"] \
+        and df["Close"] < df["BB_Lower_16_2"] \
+        and df["Close_Pct_DHigh"] > 0.50:
+            if bbl.iloc[idx-1] == True \
+            and df["Range"] > df["ATR"]:
+                if df["Close_Pct_High"] < 0.34:
+                    return True
+                elif df["Hammer"]:
+                    return True
         # Previous bar outside BBL
         if self.open.iloc[idx-1] < bbl.iloc[idx-1] \
         and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
-        and self.range.iloc[idx-1] > atr.iloc[idx-1] \
-        and df["Range"] > df["ATR"] \
-        and df["Close"] > df["BB_Lower_16_2"] \
-        and rsi.iloc[idx-1] < 30 \
-        and df["Close_Pct_High"] < 0.34 \
-        and self.current_bar(df) == 1:
-            return True
-        # Current bar outside BBL
-        elif df["Open"] < df["BB_Lower_16_2"] \
-        and df["Close"] < df["BB_Lower_16_2"] \
-        and df["Range"] > df["ATR"] \
         and df["Close_Pct_DHigh"] > 0.50 \
-        and df["RSI"] < 30 \
-        and df["Close_Pct_High"] < 0.34:
+        and self.current_bar(df) == 1 \
+        and df["Close"] > self.high.iloc[idx-1] \
+        and df["Range"] > df["ATR"]:
             return True
             
 

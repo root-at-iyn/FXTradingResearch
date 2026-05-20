@@ -179,7 +179,7 @@ def apply_features(data: pd.DataFrame):
     data["Bull_BBR_C3"] = data.apply(
         pattern.bullish_bb_reversal_c3,
         axis=1,
-        args=[data["BB_Lower_16_2"], data["ATR"], data["RSI"]]
+        args=[data["BB_Lower_16_2"], data["BBL_BO"]]
     )
 
     return data
@@ -189,7 +189,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -207,18 +207,18 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    print(data.query("Bear_BBR_C3 == True"))
-    print(data.query("Bear_BBR_C3 == True").head(50)[[
-        "Iday_Range", "ADR", "Low", "BB_Upper_16_2", "Close_Pct_DHigh", 
-        "RSI", "RSI_DVG","Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
-        "Close_Pct_High", "Close_Pct_SMA", "Range", "ATR"]
-        ])
-
-    # print(data.query("Bull_BBR_C3 == True"))
-    # print(data.query("Bull_BBR_C3 == True").tail(50)[[
-    #     "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "RSI_DVG", "BB_Lower_16_2",
-    #     "RSI", "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing"]
+    # print(data.query("Bear_BBR_C2 == True"))
+    # print(data.query("Bear_BBR_C2 == True").head(50)[[
+    #     "Iday_Range", "ADR", "Low", "BB_Upper_16_2", "Close_Pct_DHigh", 
+    #     "RSI", "RSI_DVG","Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
+    #     "Close_Pct_High", "Close_Pct_SMA", "Range", "ATR"]
     #     ])
+
+    print(data.query("Bull_BBR_C3 == True"))
+    print(data.query("Bull_BBR_C3 == True").tail(50)[[
+        "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "RSI_DVG", "BB_Lower_16_2",
+        "RSI", "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing"]
+        ])
     
     
     # print(data.query("Bear_BBR_V2 == True"))
