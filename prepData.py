@@ -63,6 +63,8 @@ def apply_features(data: pd.DataFrame):
         args=[3, "SMA16"]
         )
     data["Close_Pct_SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
+    data["High_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "High"])
+    data["Low_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "Low"])
     data["RSI"] = data.apply((indicator.rsi), axis=1)
     data["RSI_DVG"] = data.apply(
         indicator.rsi_divergence, 
@@ -181,6 +183,12 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Lower_16_2"], data["BBL_BO"]]
     )
+    data["Bull_BBR_C4"] = data.apply(
+        pattern.bullish_bb_reversal_c4,
+        axis=1,
+        args=[data["BB_Lower_16_2"]]
+    )
+
 
     return data
 
@@ -207,18 +215,18 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    # print(data.query("Bear_BBR_C2 == True"))
-    # print(data.query("Bear_BBR_C2 == True").head(50)[[
-    #     "Iday_Range", "ADR", "Low", "BB_Upper_16_2", "Close_Pct_DHigh", 
-    #     "RSI", "RSI_DVG","Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
-    #     "Close_Pct_High", "Close_Pct_SMA", "Range", "ATR"]
-    #     ])
-
-    print(data.query("Bull_BBR_C3 == True"))
-    print(data.query("Bull_BBR_C3 == True").tail(50)[[
-        "Iday_Range", "ADR", "Range", "ATR", "High", "Low", "Sig_Low", "RSI_DVG", "BB_Lower_16_2",
-        "RSI", "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing"]
+    print(data.query("Bear_BBR_C4 == True"))
+    print(data.query("Bear_BBR_C4 == True").head(50)[[
+        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Upper_16_2", 
+        "RSI", "High_Pct_SMA", "Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
+        "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
         ])
+
+    # print(data.query("Bull_BBR_C4 == True"))
+    # print(data.query("Bull_BBR_C4 == True").tail(50)[[
+    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Lower_16_2",
+    #     "RSI", "Low_Pct_SMA", "Hammer", "Bull_Engulf", "Piercing", "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
+    #     ])
     
     
     # print(data.query("Bear_BBR_V2 == True"))

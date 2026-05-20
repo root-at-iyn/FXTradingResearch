@@ -232,6 +232,16 @@ class Indicator():
         pct_sma = (df["Close"] - df[sma_col_name]) / df[sma_col_name] * 100
         return pct_sma
 
+    def pct_sma(
+            self,
+            df,   
+            sma_col_name: str = "SMA16",
+            price_point: str = "Close"
+            ):
+        """Return percentage distance of the Close price from the SMA"""
+        pct_sma = abs(df[price_point] - df[sma_col_name]) / df[sma_col_name] * 100
+        return pct_sma
+
     def rsi(self, df: Series, period: int = 16):
         """
         Returns the Relative Strength Index (RSI)
@@ -690,7 +700,7 @@ class Pattern():
                 # No divergence
                 elif rsi.iloc[idx-1] > 70 \
                 and self.open.iloc[idx-1] < bbu.iloc[idx-1] \
-                and self.close[idx-1] > bbu.iloc[idx-1] \
+                and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
                 and df["RSI"] < 70 \
                 and df["Close"] < df["BB_Upper_16_2"] \
                 and self.current_bar(df) == -1:
@@ -737,15 +747,15 @@ class Pattern():
         Occurs in Uptrend with positive SMA slopes
         """
         idx = int(df["Idx"])
-        if df["Close_Pct_DHigh"] < 0.25 \
-        and df["SMA_Trend"] == 2 \
-        and df["SMA16_Slope"] > 45 \
-        and df["SMA32_Slope"] > 30 \
-        and df["SMA16_Slope"] > df["SMA32_Slope"] \
-        and df["Close_Pct_SMA"] > 0.1 \
-        and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
-        and (df["Close_Pct_High"] > 0.66 or self.current_bar(df) == -1):
-            return True
+        if df["High_Pct_SMA"] > 0.3 \
+        and df["High"] > df["BB_Upper_16_2"]:
+            if df["RSI_DVG"] == True:
+                if any([df["Shooting_Star"], df["Bear_Engulf"], df["Dark_Cloud"]]) \
+                and df["Range"] > df["ATR"] * 1.25:
+                    return True
+                elif df["Close_Pct_High"] > 0.66:
+                    if df["Range"] > df["ATR"] * 1:
+                        return True
         
     def bearish_bb_reversal_c5(
             self,
@@ -912,7 +922,28 @@ class Pattern():
         and df["Close"] > self.high.iloc[idx-1] \
         and df["Range"] > df["ATR"]:
             return True
-            
+
+    def bullish_bb_reversal_c4(
+            self,
+            df: Series,
+            bbl: Series
+            ):
+        """
+        Bullish BBR Case 4 (Mean Reversion)
+        Price extended > 0.10% of SMA16 & bar closes near High
+        Occurs in Downtrend with negative SMA slopes
+        """
+        idx = int(df["Idx"])
+        if df["Low_Pct_SMA"] > 0.3 \
+        and df["Low"] < df["BB_Lower_16_2"]:
+            if df["RSI_DVG"] == True:
+                if any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]) \
+                and df["Range"] > df["ATR"] * 1.25:
+                    return True
+                elif df["Close_Pct_High"] < 0.34:
+                    if df["Range"] > df["ATR"] * 1:
+                        return True
+
 
     def intraday_low_reversal(self, df: Series):
         """
