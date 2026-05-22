@@ -39,33 +39,33 @@ def apply_features(data: pd.DataFrame):
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])    
     
-    data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4])
-    data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16])
-    data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32])
+    data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
+    data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16, data["Close"]])
+    data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32, data["Close"]])
     data["BB_Upper_16_2"] = data.apply(
         indicator.bollinger_band_upper, 
         axis=1, 
-        args=[2, "SMA16"]
+        args=[2, "SMA16", data["Close"]]
         )
     data["BB_Upper_16_3"] = data.apply(
         indicator.bollinger_band_upper, 
         axis=1, 
-        args=[3, "SMA16"]
+        args=[3, "SMA16", data["Close"]]
         )
     data["BB_Lower_16_2"] = data.apply(
         indicator.bollinger_band_lower, 
         axis=1, 
-        args=[2, "SMA16"]
+        args=[2, "SMA16", data["Close"]]
         )
     data["BB_Lower_16_3"] = data.apply(
         indicator.bollinger_band_lower, 
         axis=1, 
-        args=[3, "SMA16"]
+        args=[3, "SMA16", data["Close"]]
         )
     data["Close_Pct_SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
     data["High_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "High"])
     data["Low_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "Low"])
-    data["RSI"] = data.apply((indicator.rsi), axis=1)
+    data["RSI"] = data.apply((indicator.rsi), axis=1, args=[data["Close"]])
     data["RSI_DVG"] = data.apply(
         indicator.rsi_divergence, 
         axis=1, 
@@ -98,6 +98,10 @@ def apply_features(data: pd.DataFrame):
         indicator.sma_slope, axis=1, 
         args=[data["SMA32"]]
         )
+    data["SMA16_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[16, data["SMA16_Slope"]])
+    data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[16, data["SMA32_Slope"]])
     
     # Patterns
     pattern = Pattern(
@@ -188,7 +192,11 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Lower_16_2"]]
     )
-
+    data["Bull_BBR_C5"] = data.apply(
+        pattern.bullish_bb_reversal_c5, 
+        axis=1,
+        args=[data["BB_Lower_16_2"]]
+    )
 
     return data
 
@@ -215,18 +223,18 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    print(data.query("Bear_BBR_C4 == True"))
-    print(data.query("Bear_BBR_C4 == True").head(50)[[
-        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Upper_16_2", 
-        "RSI", "High_Pct_SMA", "Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
-        "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
-        ])
-
-    # print(data.query("Bull_BBR_C4 == True"))
-    # print(data.query("Bull_BBR_C4 == True").tail(50)[[
-    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Lower_16_2",
-    #     "RSI", "Low_Pct_SMA", "Hammer", "Bull_Engulf", "Piercing", "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
+    # print(data.query("Bear_BBR_C4 == True"))
+    # print(data.query("Bear_BBR_C4 == True").head(50)[[
+    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Upper_16_2", 
+    #     "RSI", "High_Pct_SMA", "Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
+    #     "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
     #     ])
+
+    print(data.query("Bull_BBR_C5 == True"))
+    print(data.query("Bull_BBR_C5 == True").tail(50)[[
+        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Lower_16_2",
+        "RSI", "Low_Pct_SMA", "Hammer", "Bull_Engulf", "Piercing", "SMA32_Slope", "SMA16_Slope", "SMA32_Slope_SMA", "SMA16_Slope_SMA"]
+        ])
     
     
     # print(data.query("Bear_BBR_V2 == True"))

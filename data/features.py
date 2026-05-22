@@ -137,7 +137,6 @@ class Indicator():
         self.yday_low = None
         self.daily_range = []
         self.adr = None
-        self.closes = []
         self.day_idx = 0
         self.gain = []
         self.loss = []
@@ -184,42 +183,43 @@ class Indicator():
             self.day_idx += 1
         return self.day_idx
     
-    def SMA(self, df: Series, n: int):
+    def SMA(self, df: Series, n: int, price_data: Series):
         "Return the Simple Moving Average of Close prices over `n` periods"
         
-        self.closes.append(df["Close"])
-        if len(self.closes) > n:
-            return sum(self.closes[-n:])/n
+        idx = int(df["Idx"])
+        if len(price_data) > n:
+            return sum(price_data.iloc[idx-n+1:idx+1])/n
         
-    def sma_standard_deviation(self, df: Series, sma_col_name: str, n: int):
+    def sma_standard_deviation(self, df: Series, avg_col_name: str, n: int, price_data: Series):
         """Return the Standard Deviation of the last `n` SMA periods"""
 
         idx = int(df["Idx"])
-        square_dev = [(x - df[sma_col_name])**2 for x in self.closes[((idx-n+1)):idx+1]]
-        variance = sum(square_dev)/n
-        standard_dev = sqrt(variance)
-        return standard_dev
+        if idx > n:
+            square_dev = [(x - df[avg_col_name])**2 for x in price_data.iloc[idx-n+1:idx+1]]
+            variance = sum(square_dev)/n
+            standard_dev = sqrt(variance)
+            return standard_dev
     
     def bollinger_band_upper(
-            self, df: Series, k: int, sma_col_name: str, n: int = 16
+            self, df: Series, k: int, sma_col_name: str, price_data: Series, n: int = 16
             ):
         """
         Return the Bollinger Upper-Band value to `k` standard 
         deviations for the last `n` SMA periods
         """
-        std = self.sma_standard_deviation(df, sma_col_name, n)
+        std = self.sma_standard_deviation(df, sma_col_name, n, price_data)
         if std is not None:
             return df[sma_col_name] + (std * k)
 
     def bollinger_band_lower(
-            self, df: Series, k: int, sma_col_name: str, n: int = 16
+            self, df: Series, k: int, sma_col_name: str, price_data: Series, n: int = 16
             ):
         """
         Return the Bollinger Lower-Band value to `k` standard 
         deviations for the last `n` SMA periods
         """
 
-        std = self.sma_standard_deviation(df, sma_col_name, n)
+        std = self.sma_standard_deviation(df, sma_col_name, n, price_data)
         if std is not None:
             return df[sma_col_name] - std * k
     
@@ -239,17 +239,18 @@ class Indicator():
             price_point: str = "Close"
             ):
         """Return percentage distance of the Close price from the SMA"""
-        pct_sma = abs(df[price_point] - df[sma_col_name]) / df[sma_col_name] * 100
-        return pct_sma
+        if df[sma_col_name] > 0:
+            pct_sma = abs(df[price_point] - df[sma_col_name]) / df[sma_col_name] * 100
+            return pct_sma
 
-    def rsi(self, df: Series, period: int = 16):
+    def rsi(self, df: Series, close: Series, period: int = 16):
         """
         Returns the Relative Strength Index (RSI)
         """
 
         idx = int(df["Idx"])
         if idx > 0:
-            change = df["Close"] - self.closes[idx-1]
+            change = df["Close"] - close.iloc[idx-1]
             self.gain.append(change if change > 0 else 0)
             self.loss.append(abs(change) if change < 0 else 0)
             # Calc Initial Average Gain/Loss
@@ -743,8 +744,7 @@ class Pattern():
             ):
         """
         Bearish BBR Case 4 (Mean Reversion)
-        Price extended > 0.10% of SMA16 & bar closes near Low
-        Occurs in Uptrend with positive SMA slopes
+        Price extended > 0.30% of SMA16 & bar closes near Low
         """
         idx = int(df["Idx"])
         if df["High_Pct_SMA"] > 0.3 \
@@ -930,8 +930,7 @@ class Pattern():
             ):
         """
         Bullish BBR Case 4 (Mean Reversion)
-        Price extended > 0.10% of SMA16 & bar closes near High
-        Occurs in Downtrend with negative SMA slopes
+        Price extended > 0.30% of SMA16 & bar closes near High
         """
         idx = int(df["Idx"])
         if df["Low_Pct_SMA"] > 0.3 \
@@ -944,6 +943,24 @@ class Pattern():
                     if df["Range"] > df["ATR"] * 1:
                         return True
 
+    def bullish_bb_reversal_c5(
+            self,
+            df: Series,
+            bbu: Series
+            ):
+        """
+        Bullish BBR Case 5 (Trend Continuation)
+        Use ATR * 1.5 (R/R 1:2) target
+        """
+        idx = int(df["Idx"])
+        if df["SMA32_Slope_SMA"] > 22.5 \
+        and df["SMA32_Slope"] > 0 \
+        and df["Low"] < df["BB_Lower_16_2"] \
+        and df["BB_Lower_16_2"] < df["SMA32"] \
+        and df["Close"] > df["BB_Lower_16_2"] \
+        and df["Close_Pct_High"] < 0.34:
+            return True
+            
 
     def intraday_low_reversal(self, df: Series):
         """
