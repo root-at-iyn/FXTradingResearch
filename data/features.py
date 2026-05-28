@@ -757,33 +757,14 @@ class Pattern():
                     if df["Range"] > df["ATR"] * 1:
                         return True
         
-    def bearish_bb_reversal_c5(
-            self,
-            df: Series,
-            bbu: Series
-            ):
-        """
-        Bearish BBR Case 5 (Trend Continuation)
-        """
-        idx = int(df["Idx"])
-        if df["SMA32_Slope"] < -10 \
-        and df["SMA32_Slope"] > -30 \
-        and df["SMA16_Slope"] < 10 \
-        and df["SMA32_Slope"] < df["SMA16_Slope"] \
-        and df["Close_Pct_DHigh"] > 0.50 \
-        and df["Close_Pct_SMA"] > 0.01 \
-        and df["High"] > df["BB_Upper_16_2"] \
-        and (self.current_bar(df) == -1):
-            return True 
         
     def bearish_bb_reversal_v2(self, df:Series):
-        """All bearish reversal signals"""
+        """All bearish bb reversal signals"""
         signals = any([
             df["Bear_BBR_C1"],
             df["Bear_BBR_C2"],
             df["Bear_BBR_C3"],
-            df["Bear_BBR_C4"],
-            df["Bear_BBR_C5"],
+            df["Bear_BBR_C4"]
         ])
         return signals
 
@@ -942,25 +923,16 @@ class Pattern():
                 elif df["Close_Pct_High"] < 0.34:
                     if df["Range"] > df["ATR"] * 1:
                         return True
-
-    def bullish_bb_reversal_c5(
-            self,
-            df: Series,
-            bbu: Series
-            ):
-        """
-        Bullish BBR Case 5 (Trend Continuation)
-        Use ATR * 1.5 (R/R 1:2) target
-        """
-        idx = int(df["Idx"])
-        if df["SMA32_Slope_SMA"] > 22.5 \
-        and df["SMA32_Slope"] > 0 \
-        and df["Low"] < df["BB_Lower_16_2"] \
-        and df["BB_Lower_16_2"] < df["SMA32"] \
-        and df["Close"] > df["BB_Lower_16_2"] \
-        and df["Close_Pct_High"] < 0.34:
-            return True
             
+    def bullish_bb_reversal_v2(self, df:Series):
+        """All bullish bb reversal signals"""
+        signals = any([
+            df["Bull_BBR_C1"],
+            df["Bull_BBR_C2"],
+            df["Bull_BBR_C3"],
+            df["Bull_BBR_C4"]
+        ])
+        return signals
 
     def intraday_low_reversal(self, df: Series):
         """
@@ -1026,11 +998,12 @@ class Pattern():
 
         idx = int(df["Idx"])
         if idx >= period:
-            max_range = max(self.range.iloc[idx-period:idx])
+            # max_range = max(self.range.iloc[idx-period:idx])
             if self.current_bar(df) == 1 and df["Close"] > df[bb_upper]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
-                and df["Close_Pct_High"] < 0.5 \
-                and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.20:
+                and df["Close_Pct_High"] < 0.25 \
+                and df["Open_Pct_High"] > 0.66 \
+                and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.34:
                     return True
 
     def bb_lower_breakout(
@@ -1041,9 +1014,131 @@ class Pattern():
 
         idx = int(df["Idx"])
         if idx >= period:
-            max_range = max(self.range.iloc[idx-period:idx])
+            # max_range = max(self.range.iloc[idx-period:idx])
             if self.current_bar(df) == -1 and df["Close"] < df[bb_lower]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
-                and df["Close_Pct_High"] > 0.5 \
-                and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.20:
+                and df["Close_Pct_High"] > 0.75 \
+                and df["Open_Pct_High"] < 0.34 \
+                and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.34:
                     return True
+                
+    def downtrend_breakout(self, df: Series):
+        """A breakout of the lower band leading to downtrend day"""
+
+        if df["BBL_BO"] == True \
+        and df["SMA_Trend"] in [-1,-2] \
+        and df["Iday_Range"] - (df["Close_Pct_DHigh"] * df["Iday_Range"]) + (df["ADR"] * 0.25) < \
+        df["ADR"]:
+            return True
+        
+    def uptrend_breakout(self, df: Series):
+        """A breakout of the upper band leading to uptrend day"""
+        
+        if df["BBU_BO"] == True \
+        and df["SMA_Trend"] in [1,2] \
+        and df["Iday_Range"] - (df["Close_Pct_DHigh"] * df["Iday_Range"]) + (df["ADR"] * 0.25) < \
+        df["ADR"]:
+            return True
+        
+    def bullish_trend_continuation(self, df: Series):
+        """
+        Continuation of bullish trend from SMA support
+
+        #### Trading Conditions
+        - TP = 1:1 (ATR) R/R SMA16
+        """
+        bullish_candles = any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]])
+        # Uptrend or Consolidation
+        if df["SMA_Trend"] in [0,2] \
+        and (df["BB_Upper_16_2"] - df["Close"]) / \
+        (df["BB_Upper_16_2"] - df["BB_Lower_16_2"]) \
+        > 0.34:
+            # SMA16
+            if df["SMA_Trend"] in [0,2] \
+            and df["Low"] < df["SMA16"] \
+            and df["Close"] > df["SMA16"] \
+            and df["SMA16"] > df["SMA32"] \
+            and df["SMA16_Slope_SMA"] > 11.25:
+                if self.current_bar(df) == 1 \
+                and df["Open"] > df["SMA16"] \
+                and df["Close_Pct_High"] < 0.34:
+                    return True
+                elif self.current_bar(df) == -1:
+                    return True
+            # SMA32
+            if df["SMA_Trend"] in [0,2] \
+            and df["Low"] < df["SMA32"] \
+            and df["Close"] > df["SMA32"] \
+            and df["SMA16"] > df["SMA32"] \
+            and df["SMA32_Slope_SMA"] > 11.25:
+                if self.current_bar(df) == 1 \
+                and df["Open"] > df["SMA32"] \
+                and df["Close_Pct_High"] < 0.34:
+                    return True
+                elif self.current_bar(df) == -1:
+                    return True
+            # CANDLESTICK PATTERNS
+            if bullish_candles == True \
+            and df["Close"] > df["SMA32"] \
+            and df["Range"] > df["ATR"] \
+            and df["SMA32_Slope_SMA"] > 11.25 \
+            and df["SMA16_Slope_SMA"] > df["SMA32_Slope_SMA"]:
+                return True
+
+    def bullish_sma_breakout(self, df: Series):
+        """
+        Breakout of SMA consolidation or bearish retracement
+        continuing uptrend
+        """
+        # MA Breakout (retracement)
+        if df["SMA_Trend"] == -1 \
+        and df["Open"] < df["SMA4"] \
+        and df["Close"] > df["SMA16"] \
+        and df["Close_Pct_High"] < 0.34 \
+        and df["SMA16_Slope_SMA"] > 11.25 \
+        and df["Range"] > df["ATR"] * 1.25:
+            return True
+        # MA Breakout (consolidation)
+        if df["SMA_Trend"] == 0 \
+        and df["SMA16"] > df["SMA32"] \
+        and df["Open"] < df["SMA32"] \
+        and df["Close"] > df["SMA16"] \
+        and df["Close_Pct_High"] < 0.34 \
+        and df["SMA16_Slope_SMA"] > 11.25 \
+        and df["Range"] > df["ATR"] * 1.25:
+            return True
+            
+    def bullish_momentum(self, df: Series, sma4_slope: Series):
+            """
+            Bullish momentum in retracement or uptrend
+
+            - TP = 1:1 R/R (ATR)
+            """
+            idx = int(df["Idx"])
+            # SMA4
+            if df["SMA_Trend"] in [1,2]:
+                # small body
+                if self.current_bar(df) == 1 \
+                and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+                and df["Close_Pct_High"] < 0.34 \
+                and df["Body"] < self.body.iloc[idx-1] \
+                and df["SMA4_Slope"] > 0:
+                    return True
+                # close below sma4
+                if df["Close"] < df["SMA4"] \
+                and df["SMA4_Slope"] > 0:
+                    return
+                # sma4 slope turns positive
+                if df["SMA32_Slope_SMA"] > 22.5 \
+                and sma4_slope.iloc[idx-1] < 0 \
+                and df["SMA4_Slope"] > 0 \
+                and df["Close"] > df["SMA4"] \
+                and df["Close_Pct_High"] < 0.34:
+                    return True
+                # close through sma4
+                # if Range > ATR; buy at SMA4
+                if df["Open"] < df["SMA4"] \
+                and df["Close"] > df["SMA4"] \
+                and df["Close_Pct_High"] < 0.34:
+                    return True
+            

@@ -62,7 +62,7 @@ def apply_features(data: pd.DataFrame):
         axis=1, 
         args=[3, "SMA16", data["Close"]]
         )
-    data["Close_Pct_SMA"] = data.apply(indicator.close_pct_sma, axis=1, args=["SMA16"])
+    data["Close_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "Close"])
     data["High_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "High"])
     data["Low_Pct_SMA"] = data.apply(indicator.pct_sma, axis=1, args=["SMA16", "Low"])
     data["RSI"] = data.apply((indicator.rsi), axis=1, args=[data["Close"]])
@@ -98,6 +98,8 @@ def apply_features(data: pd.DataFrame):
         indicator.sma_slope, axis=1, 
         args=[data["SMA32"]]
         )
+    data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[16, data["SMA4_Slope"]])
     data["SMA16_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[16, data["SMA16_Slope"]])
     data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
@@ -161,11 +163,6 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Upper_16_2"]]
     )
-    data["Bear_BBR_C5"] = data.apply(
-        pattern.bearish_bb_reversal_c5, 
-        axis=1,
-        args=[data["BB_Upper_16_2"]]
-        )
     
     data["Bear_BBR_V2"] = data.apply(pattern.bearish_bb_reversal_v2, axis=1)
 
@@ -192,11 +189,10 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Lower_16_2"]]
     )
-    data["Bull_BBR_C5"] = data.apply(
-        pattern.bullish_bb_reversal_c5, 
-        axis=1,
-        args=[data["BB_Lower_16_2"]]
-    )
+    data["DTrend_BO"] = data.apply(pattern.downtrend_breakout, axis=1)
+    data["UTrend_BO"] = data.apply(pattern.uptrend_breakout, axis=1)
+    data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
+    data["Bull_Momentum"] = data.apply(pattern.bullish_momentum, axis=1, args=[data["SMA4_Slope"]])
 
     return data
 
@@ -223,24 +219,30 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    # print(data.query("Bear_BBR_C4 == True"))
-    # print(data.query("Bear_BBR_C4 == True").head(50)[[
-    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Upper_16_2", 
-    #     "RSI", "High_Pct_SMA", "Hammer", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
-    #     "SMA32_Slope", "SMA16_Slope", "SMA4_Slope"]
+    # print(data.query("DTrend_BO == True"))
+    # print(data.query("DTrend_BO == True and SMA16_Slope_SMA > 0").head(50)[[
+    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
+    #     "Close_Pct_DHigh", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
+    #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_BBR_C5 == True"))
-    print(data.query("Bull_BBR_C5 == True").tail(50)[[
-        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "BB_Lower_16_2",
-        "RSI", "Low_Pct_SMA", "Hammer", "Bull_Engulf", "Piercing", "SMA32_Slope", "SMA16_Slope", "SMA32_Slope_SMA", "SMA16_Slope_SMA"]
-        ])
-    
+    print(data.query("Bull_TC == True"))
+    print(data.query("Bull_TC == True").iloc[0:100][[
+        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
+        "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing", "SMA4_Slope", "SMA_Trend",
+        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
+        ])    
     
     # print(data.query("Bear_BBR_V2 == True"))
     # print(data.query("Bear_BBR_V2 == True").tail(100)[[
     #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
-    #     "Bear_BBR_C1", "Bear_BBR_C2", "Bear_BBR_C3", "Bear_BBR_C4", "Bear_BBR_C5"]
+    #     "Bear_BBR_C1", "Bear_BBR_C2", "Bear_BBR_C3", "Bear_BBR_C4"]
+    #     ])
+
+    # print(data.query("Bull_BBR_V2 == True"))
+    # print(data.query("Bull_BBR_V2 == True").tail(100)[[
+    #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+    #     "Bull_BBR_C1", "Bull_BBR_C2", "Bull_BBR_C3", "Bull_BBR_C4"]
     #     ])
 
     # output feature enhanced price data to csv
