@@ -1077,13 +1077,6 @@ class Pattern():
                     return True
                 elif self.current_bar(df) == -1:
                     return True
-            # CANDLESTICK PATTERNS
-            if bullish_candles == True \
-            and df["Close"] > df["SMA32"] \
-            and df["Range"] > df["ATR"] \
-            and df["SMA32_Slope_SMA"] > 11.25 \
-            and df["SMA16_Slope_SMA"] > df["SMA32_Slope_SMA"]:
-                return True
 
     def bullish_sma_breakout(self, df: Series):
         """
@@ -1141,4 +1134,22 @@ class Pattern():
                 and df["Close"] > df["SMA4"] \
                 and df["Close_Pct_High"] < 0.34:
                     return True
-            
+
+    def bullish_candle(self, df: Series):
+        """
+        Bullish candlestick pattern in uptrend
+        """
+        # CANDLESTICK PATTERNS
+        bullish_candles = any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]])
+        # Uptrend or Consolidation
+        # close less than 34% away from BBU
+        if df["SMA_Trend"] in [0,2] \
+        and (df["BB_Upper_16_2"] - df["Close"]) / \
+        (df["BB_Upper_16_2"] - df["BB_Lower_16_2"]) \
+        > 0.34:
+            if bullish_candles == True \
+            and df["Close"] > df["SMA32"] \
+            and df["Range"] > df["ATR"] \
+            and df["SMA32_Slope_SMA"] > 11.25 \
+            and df["SMA16_Slope_SMA"] > df["SMA32_Slope_SMA"]:
+                return True
