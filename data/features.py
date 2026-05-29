@@ -1082,13 +1082,17 @@ class Pattern():
         """
         Breakout of SMA consolidation or bearish retracement
         continuing uptrend
+
+        - TP1 = 1:2 R/R (Range) - retracement, consolidation
+        - TP2 = 1:5 R/R (Range) - downtrend
+        - SL = Range (pips)
         """
         # MA Breakout (retracement)
         if df["SMA_Trend"] == -1 \
         and df["Open"] < df["SMA4"] \
         and df["Close"] > df["SMA16"] \
         and df["Close_Pct_High"] < 0.34 \
-        and df["SMA16_Slope_SMA"] > 11.25 \
+        and df["SMA32_Slope_SMA"] > 0 \
         and df["Range"] > df["ATR"] * 1.25:
             return True
         # MA Breakout (consolidation)
@@ -1097,10 +1101,17 @@ class Pattern():
         and df["Open"] < df["SMA32"] \
         and df["Close"] > df["SMA16"] \
         and df["Close_Pct_High"] < 0.34 \
-        and df["SMA16_Slope_SMA"] > 11.25 \
+        and df["SMA32_Slope_SMA"] > 0 \
         and df["Range"] > df["ATR"] * 1.25:
             return True
-            
+        # MA Breakout (downtrend)
+        if df["SMA_Trend"] == -2 \
+        and df["Open"] < df["SMA4"] \
+        and df["Close"] > df["SMA32"] \
+        and df["Close_Pct_High"] < 0.34 \
+        and df["SMA32_Slope_SMA"] < -11.25 \
+        and df["Range"] > df["ATR"] * 1.25:
+            return True
     def bullish_momentum(self, df: Series, sma4_slope: Series):
             """
             Bullish momentum in retracement or uptrend
