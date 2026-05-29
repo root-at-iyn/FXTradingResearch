@@ -1112,6 +1112,7 @@ class Pattern():
         and df["SMA32_Slope_SMA"] < -11.25 \
         and df["Range"] > df["ATR"] * 1.25:
             return True
+        
     def bullish_momentum(self, df: Series, sma4_slope: Series):
             """
             Bullish momentum in retracement or uptrend
@@ -1146,21 +1147,25 @@ class Pattern():
                 and df["Close_Pct_High"] < 0.34:
                     return True
 
-    def bullish_candle(self, df: Series):
+    def bullish_trend_candle(self, df: Series):
         """
         Bullish candlestick pattern in uptrend
+
+        - TP = 1:1 R/R (Range/ATR)
         """
         # CANDLESTICK PATTERNS
         bullish_candles = any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]])
         # Uptrend or Consolidation
         # close less than 34% away from BBU
-        if df["SMA_Trend"] in [0,2] \
-        and (df["BB_Upper_16_2"] - df["Close"]) / \
-        (df["BB_Upper_16_2"] - df["BB_Lower_16_2"]) \
-        > 0.34:
-            if bullish_candles == True \
-            and df["Close"] > df["SMA32"] \
-            and df["Range"] > df["ATR"] \
-            and df["SMA32_Slope_SMA"] > 11.25 \
-            and df["SMA16_Slope_SMA"] > df["SMA32_Slope_SMA"]:
-                return True
+        if df["SMA_Trend"] in [-1,0,2] \
+        and bullish_candles == True \
+        and df["Close"] > df["SMA32"] \
+        and df["Range"] > df["ATR"] \
+        and df["SMA32_Slope_SMA"] > 11.25 \
+        and df["SMA16_Slope_SMA"] > df["SMA32_Slope_SMA"]:
+            if self.current_bar(df) == 1:
+                if df["Low"] < df["SMA32"]:
+                    return True
+                if df["Low"] < df["SMA16"] \
+                and df["Close"] > df["SMA16"]:
+                    return True

@@ -194,7 +194,7 @@ def apply_features(data: pd.DataFrame):
     data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
     data["Bull_Momentum"] = data.apply(pattern.bullish_momentum, axis=1, args=[data["SMA4_Slope"]])
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
-    data["Bull_Candle"] = data.apply(pattern.bullish_candle, axis=1)
+    data["Bull_Candle"] = data.apply(pattern.bullish_trend_candle, axis=1)
 
     return data
 
@@ -203,7 +203,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
@@ -228,8 +228,8 @@ if __name__ == '__main__':
     #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_SMA_BO == True"))
-    print(data.query("Bull_SMA_BO == True").iloc[0:100][[
+    print(data.query("Bull_Candle == True"))
+    print(data.query("Bull_Candle == True").iloc[0:100][[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
         "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing", "SMA4_Slope", "SMA_Trend",
         "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
