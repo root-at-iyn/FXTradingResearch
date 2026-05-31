@@ -1096,8 +1096,6 @@ class Pattern():
     def bullish_momentum(
             self, 
             df: Series, 
-            open_pct_high: Series, 
-            close_pct_high: Series,
             sma4_slope_sma: Series,
             sma4: Series,
             utrend_bo: Series,
@@ -1117,20 +1115,14 @@ class Pattern():
                 # slope > 45 over last 4 bars
                 # close above prev bar high
                 # close > sma4
-                if sma4_slope_sma.iloc[idx-1] > 45 \
-                and self.close.iloc[idx-1] > sma4.iloc[idx-1] \
-                and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
-                and self.close.iloc[idx-1] > self.high.iloc[idx-2] \
-                and close_pct_high.iloc[idx-1] < 0.34:
-                    # full body
-                    if open_pct_high.iloc[idx-1] > 0.66 \
-                    and df["Low"] <= \
-                    (self.close.iloc[idx-1] - (self.body.iloc[idx-1] * 0.5)):
-                        return True
-                    # open > lower 3rd of range
-                    if open_pct_high.iloc[idx-1] < 0.66 \
-                    and df["Low"] < self.open.iloc[idx-1]:
-                        return True
+                if df["SMA4_Slope_SMA"] > 45 \
+                and df["Close"] > df["SMA4"] \
+                and self.current_bar(df) == 1 \
+                and df["Close"] > self.high.iloc[idx-1] \
+                and df["Close"] < 0.34:
+                    # limit order 0.5 prev_body if open_pct_high > 0.66 and 
+                    # limit order at prev_open if open_pct_high < 0.66 
+                    return True
                 # breakouts
                 bo_ts = None
                 now = df.name
@@ -1145,6 +1137,8 @@ class Pattern():
                     sma4_window = sma4.loc[bo_ts:now]
                     close_window = self.close.loc[bo_ts:now]
                     closed_below_sma4 = False
+                    # breakout within the same trading day
+                    # and close not fallen below sma4 since breakout
                     for i in range(len(sma4_window)):
                         if close_window.iloc[i] < sma4_window.iloc[i]:
                             closed_below_sma4 = True

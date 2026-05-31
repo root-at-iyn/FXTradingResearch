@@ -197,10 +197,9 @@ def apply_features(data: pd.DataFrame):
     data["Bull_Momentum"] = data.apply(
     pattern.bullish_momentum, 
     axis=1, 
-    args=[data["Open_Pct_High"], data["Close_Pct_High"],
-            data["SMA4_Slope_SMA"], data["SMA4"], 
-            data["UTrend_BO"], data["Bull_SMA_BO"]
-            ])
+    args=[data["SMA4_Slope_SMA"], data["SMA4"], 
+          data["UTrend_BO"], data["Bull_SMA_BO"]]
+    )
 
     return data
 
