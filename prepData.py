@@ -99,7 +99,7 @@ def apply_features(data: pd.DataFrame):
         args=[data["SMA32"]]
         )
     data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
-                                         args=[16, data["SMA4_Slope"]])
+                                         args=[4, data["SMA4_Slope"]])
     data["SMA16_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[16, data["SMA16_Slope"]])
     data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
@@ -192,9 +192,15 @@ def apply_features(data: pd.DataFrame):
     data["DTrend_BO"] = data.apply(pattern.downtrend_breakout, axis=1)
     data["UTrend_BO"] = data.apply(pattern.uptrend_breakout, axis=1)
     data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
-    data["Bull_Momentum"] = data.apply(pattern.bullish_momentum, axis=1, args=[data["SMA4_Slope"]])
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
-    data["Bull_Candle"] = data.apply(pattern.bullish_trend_candle, axis=1)
+    data["Bull_TC_Candle"] = data.apply(pattern.bullish_trend_candle, axis=1)
+    data["Bull_Momentum"] = data.apply(
+    pattern.bullish_momentum, 
+    axis=1, 
+    args=[data["Open_Pct_High"], data["Close_Pct_High"],
+            data["SMA4_Slope_SMA"], data["SMA4"], 
+            data["UTrend_BO"], data["Bull_SMA_BO"]
+            ])
 
     return data
 
@@ -228,8 +234,8 @@ if __name__ == '__main__':
     #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_Candle == True"))
-    print(data.query("Bull_Candle == True").iloc[0:100][[
+    print(data.query("Bull_Momentum == True"))
+    print(data.query("Bull_Momentum == True").iloc[0:100][[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
         "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing", "SMA4_Slope", "SMA_Trend",
         "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]

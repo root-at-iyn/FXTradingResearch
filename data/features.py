@@ -1026,18 +1026,14 @@ class Pattern():
         """A breakout of the lower band leading to downtrend day"""
 
         if df["BBL_BO"] == True \
-        and df["SMA_Trend"] in [-1,-2] \
-        and df["Iday_Range"] - (df["Close_Pct_DHigh"] * df["Iday_Range"]) + (df["ADR"] * 0.25) < \
-        df["ADR"]:
+        and df["SMA_Trend"] in [-1,-2]:
             return True
         
     def uptrend_breakout(self, df: Series):
         """A breakout of the upper band leading to uptrend day"""
-        
+
         if df["BBU_BO"] == True \
-        and df["SMA_Trend"] in [1,2] \
-        and df["Iday_Range"] - (df["Close_Pct_DHigh"] * df["Iday_Range"]) + (df["ADR"] * 0.25) < \
-        df["ADR"]:
+        and df["SMA_Trend"] in [1,2]:
             return True
         
     def bullish_trend_continuation(self, df: Series):
@@ -1047,7 +1043,6 @@ class Pattern():
         #### Trading Conditions
         - TP = 1:1 (ATR) R/R SMA16
         """
-        bullish_candles = any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]])
         # Uptrend or Consolidation
         if df["SMA_Trend"] in [0,2] \
         and (df["BB_Upper_16_2"] - df["Close"]) / \
@@ -1082,70 +1077,80 @@ class Pattern():
         """
         Breakout of SMA consolidation or bearish retracement
         continuing uptrend
-
-        - TP1 = 1:2 R/R (Range) - retracement, consolidation
-        - TP2 = 1:5 R/R (Range) - downtrend
-        - SL = Range (pips)
         """
-        # MA Breakout (retracement)
-        if df["SMA_Trend"] == -1 \
-        and df["Open"] < df["SMA4"] \
-        and df["Close"] > df["SMA16"] \
-        and df["Close_Pct_High"] < 0.34 \
-        and df["SMA32_Slope_SMA"] > 0 \
-        and df["Range"] > df["ATR"] * 1.25:
-            return True
-        # MA Breakout (consolidation)
-        if df["SMA_Trend"] == 0 \
-        and df["SMA16"] > df["SMA32"] \
-        and df["Open"] < df["SMA32"] \
-        and df["Close"] > df["SMA16"] \
-        and df["Close_Pct_High"] < 0.34 \
-        and df["SMA32_Slope_SMA"] > 0 \
-        and df["Range"] > df["ATR"] * 1.25:
-            return True
-        # MA Breakout (downtrend)
-        if df["SMA_Trend"] == -2 \
-        and df["Open"] < df["SMA4"] \
-        and df["Close"] > df["SMA32"] \
-        and df["Close_Pct_High"] < 0.34 \
-        and df["SMA32_Slope_SMA"] < -11.25 \
-        and df["Range"] > df["ATR"] * 1.25:
+        idx = int(df["Idx"])
+        sma_all = Series([df["SMA4"], df["SMA16"], df["SMA32"]])
+        body_4 = self.body.iloc[idx-4:idx]
+        range_4 = self.range.iloc[idx-4:idx]
+        high_4 = self.high.iloc[idx-4:idx]
+        if df["Open"] < sma_all.min() \
+        and df["Close"] > sma_all.max() \
+        and df["Range"] > range_4.max() \
+        and df["Body"] > body_4.max() \
+        and df["Body"] > self.body.iloc[idx-1] * 2 \
+        and df["Range"] > df["ATR"] * 1.25 \
+        and df["Close"] > high_4.max() \
+        and df["Close_Pct_High"] < 0.34:
             return True
         
-    def bullish_momentum(self, df: Series, sma4_slope: Series):
+    def bullish_momentum(
+            self, 
+            df: Series, 
+            open_pct_high: Series, 
+            close_pct_high: Series,
+            sma4_slope_sma: Series,
+            sma4: Series,
+            utrend_bo: Series,
+            bullish_sma_bo: Series
+            ):
             """
-            Bullish momentum in retracement or uptrend
+            Bullish momentum in bearish retracement or uptrend
 
             - TP = 1:1 R/R (ATR)
             """
             idx = int(df["Idx"])
-            # SMA4
-            if df["SMA_Trend"] in [1,2]:
-                # small body
-                if self.current_bar(df) == 1 \
+            if idx > 0 and sma4_slope_sma.empty is False:
+                start = idx - df["Iday_Idx"]
+                bo = utrend_bo.iloc[start:idx]
+                sma_bo = bullish_sma_bo.iloc[start:idx]
+                # SMA4
+                # slope > 45 over last 4 bars
+                # close above prev bar high
+                # close > sma4
+                if sma4_slope_sma.iloc[idx-1] > 45 \
+                and self.close.iloc[idx-1] > sma4.iloc[idx-1] \
                 and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
-                and df["Close_Pct_High"] < 0.34 \
-                and df["Body"] < self.body.iloc[idx-1] \
-                and df["SMA4_Slope"] > 0:
-                    return True
-                # close below sma4
-                if df["Close"] < df["SMA4"] \
-                and df["SMA4_Slope"] > 0:
-                    return
-                # sma4 slope turns positive
-                if df["SMA32_Slope_SMA"] > 22.5 \
-                and sma4_slope.iloc[idx-1] < 0 \
-                and df["SMA4_Slope"] > 0 \
-                and df["Close"] > df["SMA4"] \
-                and df["Close_Pct_High"] < 0.34:
-                    return True
-                # close through sma4
-                # if Range > ATR; buy at SMA4
-                if df["Open"] < df["SMA4"] \
-                and df["Close"] > df["SMA4"] \
-                and df["Close_Pct_High"] < 0.34:
-                    return True
+                and self.close.iloc[idx-1] > self.high.iloc[idx-2] \
+                and close_pct_high.iloc[idx-1] < 0.34:
+                    # full body
+                    if open_pct_high.iloc[idx-1] > 0.66 \
+                    and df["Low"] <= \
+                    (self.close.iloc[idx-1] - (self.body.iloc[idx-1] * 0.5)):
+                        return True
+                    # open > lower 3rd of range
+                    if open_pct_high.iloc[idx-1] < 0.66 \
+                    and df["Low"] < self.open.iloc[idx-1]:
+                        return True
+                # breakouts
+                bo_ts = None
+                now = df.name
+                if bo.empty is False:
+                    for i in range(len(bo)):
+                        # bbu breakout
+                        if bo.iloc[i] == True:
+                            bo_ts = bo.iloc[i:i+1].index[0]
+                        # sma breakout
+                        elif sma_bo.empty is False and sma_bo.iloc[i] == True:
+                            bo_ts = bo.iloc[i:i+1].index[0]
+                    sma4_window = sma4.loc[bo_ts:now]
+                    close_window = self.close.loc[bo_ts:now]
+                    closed_below_sma4 = False
+                    for i in range(len(sma4_window)):
+                        if close_window.iloc[i] < sma4_window.iloc[i]:
+                            closed_below_sma4 = True
+                            break 
+                    if closed_below_sma4 is False:
+                        return True
 
     def bullish_trend_candle(self, df: Series):
         """
