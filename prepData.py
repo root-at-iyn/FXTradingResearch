@@ -226,17 +226,17 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    # print(data.query("DTrend_BO == True"))
-    # print(data.query("DTrend_BO == True and SMA16_Slope_SMA > 0").head(50)[[
+    # print(data.query("BBU_BO == True"))
+    # print(data.query("BBU_BO == True").head(100)[[
     #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
     #     "Close_Pct_DHigh", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
     #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_Momentum == True"))
-    print(data.query("Bull_Momentum == True").iloc[0:100][[
+    print(data.query("Bull_Momentum.notnull()"))
+    print(data.query("Bull_Momentum.notnull()").iloc[0:100][[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
-        "Close_Pct_DHigh", "Hammer", "Bull_Engulf", "Piercing", "SMA4_Slope", "SMA_Trend",
+        "Close_Pct_High", "Bull_Momentum", "SMA4_Slope", "SMA_Trend",
         "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
         ])    
     

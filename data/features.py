@@ -997,12 +997,11 @@ class Pattern():
         """Returns whether breakout above the upper bollinger band occured"""
 
         idx = int(df["Idx"])
-        if idx >= period:
-            # max_range = max(self.range.iloc[idx-period:idx])
+        if idx >= period and df["ADR"] > 0:
             if self.current_bar(df) == 1 and df["Close"] > df[bb_upper]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
                 and df["Close_Pct_High"] < 0.25 \
-                and df["Open_Pct_High"] > 0.66 \
+                and df["Range"] > df["ADR"] * 0.10 \
                 and ((df["Close"] - df[bb_upper]) / df["ATR"]) > 0.34:
                     return True
 
@@ -1013,12 +1012,12 @@ class Pattern():
         """Returns whether breakout below the lower bollinger band occured"""
 
         idx = int(df["Idx"])
-        if idx >= period:
+        if idx >= period and df["ADR"] > 0:
             # max_range = max(self.range.iloc[idx-period:idx])
             if self.current_bar(df) == -1 and df["Close"] < df[bb_lower]:
                 if df["Range"] >= (1.25 * df["ATR"]) \
                 and df["Close_Pct_High"] > 0.75 \
-                and df["Open_Pct_High"] < 0.34 \
+                and df["Range"] > df["ADR"] * 0.10 \
                 and ((df[bb_lower] - df["Close"]) / df["ATR"]) > 0.34:
                     return True
                 
@@ -1107,22 +1106,10 @@ class Pattern():
             - TP = 1:1 R/R (ATR)
             """
             idx = int(df["Idx"])
-            if idx > 0 and sma4_slope_sma.empty is False:
+            if idx > 3 and sma4_slope_sma.empty is False:
                 start = idx - df["Iday_Idx"]
                 bo = utrend_bo.iloc[start:idx]
                 sma_bo = bullish_sma_bo.iloc[start:idx]
-                # SMA4
-                # slope > 45 over last 4 bars
-                # close above prev bar high
-                # close > sma4
-                if df["SMA4_Slope_SMA"] > 45 \
-                and df["Close"] > df["SMA4"] \
-                and self.current_bar(df) == 1 \
-                and df["Close"] > self.high.iloc[idx-1] \
-                and df["Close"] < 0.34:
-                    # limit order 0.5 prev_body if open_pct_high > 0.66 and 
-                    # limit order at prev_open if open_pct_high < 0.66 
-                    return True
                 # breakouts
                 bo_ts = None
                 now = df.name
@@ -1144,6 +1131,20 @@ class Pattern():
                             closed_below_sma4 = True
                             break 
                     if closed_below_sma4 is False:
+                        return True
+                # close above prev bar high
+                # close > sma4
+                # limit order 0.5 prev_body if open_pct_high > 0.66 and 
+                # limit order at prev_open if open_pct_high < 0.66
+                if df["Close"] > df["SMA4"] \
+                and self.current_bar(df) == 1 \
+                and df["Close"] > self.high.iloc[idx-1] \
+                and df["Close_Pct_High"] < 0.34:
+                    # slope > 45
+                    if (df["SMA4_Slope"] > 45):
+                        return True
+                    # positive slope and slope_sma (> 22.5) 
+                    if df["SMA4_Slope_SMA"] > 22.5 and df["SMA4_Slope"] > 22.5:
                         return True
 
     def bullish_trend_candle(self, df: Series):
