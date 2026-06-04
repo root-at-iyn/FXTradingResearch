@@ -140,7 +140,7 @@ def apply_features(data: pd.DataFrame):
             data["Close_Pct_High"], data["BBU_BO"], data["SMA32_Slope"]
             ]
         )
-    
+    # Bearish Reversals
     data["Bear_BBR_C1"] = data.apply(
         pattern.bearish_bb_reversal_c1,
         axis=1,
@@ -163,13 +163,13 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Upper_16_2"]]
     )
-    
+    # Bullish Reversals
     data["Bear_BBR_V2"] = data.apply(pattern.bearish_bb_reversal_v2, axis=1)
 
     data["Bull_BBR_C1"] = data.apply(
         pattern.bullish_bb_reversal_c1,
         axis=1,
-        args=[data["BB_Lower_16_2"], data["SMA_Trend"]]
+        args=[data["BB_Lower_16_2"], data["BBL_BO"], data["Iday_Low"]]
     )
     data["Bull_BBR_C2"] = data.apply(
         pattern.bullish_bb_reversal_c2,
@@ -189,6 +189,8 @@ def apply_features(data: pd.DataFrame):
         axis=1,
         args=[data["BB_Lower_16_2"]]
     )
+    data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
+
     data["DTrend_BO"] = data.apply(pattern.downtrend_breakout, axis=1)
     data["UTrend_BO"] = data.apply(pattern.uptrend_breakout, axis=1)
     data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
@@ -233,11 +235,11 @@ if __name__ == '__main__':
     #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_Momentum.notnull()"))
-    print(data.query("Bull_Momentum.notnull()").iloc[0:100][[
+    print(data.query("Bull_BBR_C1 == True"))
+    print(data.query("Bull_BBR_C1 == True").iloc[0:100][[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
-        "Close_Pct_High", "Bull_Momentum", "SMA4_Slope", "SMA_Trend",
-        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
+        "Low_Pct_SMA", "Bull_Engulf", "Piercing", "Hammer",
+        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA", "SMA32_Slope", "SMA16_Slope"]
         ])    
     
     # print(data.query("Bear_BBR_V2 == True"))
@@ -247,7 +249,7 @@ if __name__ == '__main__':
     #     ])
 
     # print(data.query("Bull_BBR_V2 == True"))
-    # print(data.query("Bull_BBR_V2 == True").tail(100)[[
+    # print(data.query("Bull_BBR_V2 == True").iloc[0:100][[
     #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
     #     "Bull_BBR_C1", "Bull_BBR_C2", "Bull_BBR_C3", "Bull_BBR_C4"]
     #     ])

@@ -773,57 +773,26 @@ class Pattern():
             self,
             df: Series,
             bbl: Series,
-            sma_trend: Series,
+            bbl_bo: Series,
+            iday_low: Series,
             period: int = 8
             ):
         """
-        Bullish BBR Case 1 (Range Day)
-        Rejection of Intraday Low
+        Bullish BBR Case 1 (Classic BB Reversal)
+        - Previous open under lower band 
+        - Current close above lower band
+        - Close above top 20% of the candle range
         """
         idx = int(df["Idx"])
-        if df["ADR"] > 0 and df["Sig_Low"] > 0 \
-        and sma_trend.iloc[idx-period:idx].max() > -2 \
-        and df["Close_Pct_DHigh"] > 0.50:
-            # Open < BBL + Close up through Sig_Low
-            if self.open.iloc[idx-1] > bbl.iloc[idx-1] \
-            and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
-            and self.open.iloc[idx-1] > self.close.iloc[idx-1] \
-            and df["Open"] < df["BB_Lower_16_2"] \
-            and df["Close"] > df["BB_Lower_16_2"] \
-            and df["Close"] - self.close.iloc[idx-1] > \
-            self.body.iloc[idx-1] * 0.66 \
-            and df["Close"] > df["Sig_Low"] \
-            and df["Open"] < df["Sig_Low"]:
+        # base signal conditions
+        pct10_yday_range = (df["Yday_High"] - df["Yday_Low"]) * 0.10
+        if df["Range"] > pct10_yday_range \
+        and self.close.iloc[idx-1] < self.open.iloc[idx-1] \
+        and df["Close"] > df["BB_Lower_16_2"]:
+            # open below BBL and close above BBL
+            if self.open.iloc[idx-1] < bbl.iloc[idx-1] \
+            and df["Close_Pct_High"] < 0.20:
                 return True
-            # Hammer reversal under Sig_Low & Low < BBL + Body above BBL
-            elif df["Low"] < df["BB_Lower_16_2"] \
-            and df["Open"] > df["BB_Lower_16_2"] \
-            and df["Close"] > df["BB_Lower_16_2"] \
-            and df["High"] < df["Sig_Low"] \
-            and df["Hammer"] \
-            and df["Range"] > df["ATR"] * 1.25:
-                return True
-            # Open > BBL + Low < BBL + Close through Sig_Low
-            elif df["Low"] < df["BB_Lower_16_2"] \
-            and df["Close"] > df["BB_Lower_16_2"] \
-            and df["Open"] < df["Sig_Low"] \
-            and df["Close"] > df["Sig_Low"] \
-            and df["Close_Pct_High"] < 0.34:
-                return True
-            # Open > BBL & Sig_Low + Low < Sig_Low & Close > BBU
-            elif df["Low"] < df["BB_Lower_16_2"] \
-            and df["Close"] > df["BB_Lower_16_2"] \
-            and df["Open"] > df["Sig_Low"] \
-            and df["Close"] > df["Sig_Low"] \
-            and df["Low"] == df["Iday_Low"] \
-            and df["Range"] > df["ATR"]:
-                if self.current_bar(df) == 1 and \
-                df["Close"] - self.close.iloc[idx-1] > \
-                self.body.iloc[idx-1] * 0.66:
-                    return True
-                # postive or negative shooting star
-                elif (df["Hammer"] == True ):
-                    return True
                 
     def bullish_bb_reversal_c2(
             self,
@@ -834,45 +803,30 @@ class Pattern():
             rsi_dvg: Series
             ):
         """
-        Bullish BBR Case 2 (Extended Run)
-        Price extension out of SigLevel range
+        Bullish BBR Case 2 (Pinbar Reversal)
+        - Price rejection of key levels
+        - Body inside bollinger band
+        - Low spikes outside band
         """
         idx = int(df["Idx"])
-        if df["ADR"] > 0 and df["Sig_Low"] > 0:
-            if df["High"] < df["Sig_Low"] \
-            and df["Close_Pct_DHigh"] > 0.50:
-                # Bullish Divergence
-                if any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
-                and self.open.iloc[idx-1] > bbl.iloc[idx-1] \
-                and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
-                and self.range.iloc[idx-1] > atr.iloc[idx-1] \
-                and self.current_bar(df) == 1:
-                    # Close back above BBL
-                    if df["Close"] > df["BB_Lower_16_2"]:
-                        # Close 66% above prev body
-                        if df["Close"] - self.close.iloc[idx-1] > \
-                        self.body.iloc[idx-1] * 0.66:
-                            return True
-                        # Bullish candlstick 
-                        elif any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]):
-                            return True
-                        # 66% of candle body outside BBL
-                        elif (df["BB_Lower_16_2"] - df["Open"]) >  \
-                        df["Body"] * 0.66:
-                            return True
-                    # Hammer negative bar close outside BBL
-                    elif df["Open"] > df["BB_Lower_16_2"] \
-                    and df["Close"] < df["BB_Lower_16_2"] \
-                    and df["Hammer"] == True:
-                        return True
-                # No Divergence
-                elif rsi.iloc[idx-1] < 30 \
-                and self.open.iloc[idx-1] > bbl.iloc[idx-1] \
-                and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
-                and df["RSI"] > 30 \
-                and df["Close"] > df["BB_Lower_16_2"]\
-                and self.current_bar(df) == 1:
+        upper_candle_range = 0.34 if self.current_bar(df) == 1 else 0.50
+        # pinbar reversal pattern
+        if df["LWick"] >= (df["Body"] * 2) \
+        and df["Low"] < df["BB_Lower_16_2"] \
+        and df["Close"] > df["BB_Lower_16_2"] \
+        and df["Close"] < df["SMA16"] \
+        and df["Close_Pct_High"] < upper_candle_range:
+            # rejection off sig_low
+            if df["ILR"] == True:
                     return True
+            # rejection off yday_low
+            if df["Low"] < df["Yday_Low"] \
+                and df["Close"] > df["Yday_Low"]:
+                return True
+            # bullish divergence
+            if df["RSI_DVG"] == True \
+            and df["Low"] == df["Iday_Low"]:
+                return True
 
     def bullish_bb_reversal_c3(
             self,
@@ -886,16 +840,18 @@ class Pattern():
         """
         idx = int(df["Idx"])
         # Current bar outside BBL
+        # should be oversold on rsi
         if df["Open"] < df["BB_Lower_16_2"] \
         and df["Close"] < df["BB_Lower_16_2"] \
         and df["Close_Pct_DHigh"] > 0.50:
-            if bbl.iloc[idx-1] == True \
+            if bbl_bo.iloc[idx-1] == True \
             and df["Range"] > df["ATR"]:
                 if df["Close_Pct_High"] < 0.34:
                     return True
                 elif df["Hammer"]:
                     return True
         # Previous bar outside BBL
+        # prev_bar should be oversold on rsi
         if self.open.iloc[idx-1] < bbl.iloc[idx-1] \
         and self.close.iloc[idx-1] < bbl.iloc[idx-1] \
         and df["Close_Pct_DHigh"] > 0.50 \
@@ -1169,3 +1125,5 @@ class Pattern():
                 if df["Low"] < df["SMA16"] \
                 and df["Close"] > df["SMA16"]:
                     return True
+                
+    # reversal candles - bullish engulfing with bullish divergence in downtrend (eg. 2024-04-22 07:15)
