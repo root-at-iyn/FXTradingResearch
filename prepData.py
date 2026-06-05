@@ -169,25 +169,19 @@ def apply_features(data: pd.DataFrame):
     data["Bull_BBR_C1"] = data.apply(
         pattern.bullish_bb_reversal_c1,
         axis=1,
-        args=[data["BB_Lower_16_2"], data["BBL_BO"], data["Iday_Low"]]
+        args=[data["BB_Lower_16_2"]]
     )
     data["Bull_BBR_C2"] = data.apply(
         pattern.bullish_bb_reversal_c2,
         axis=1,
-        args=[
-            data["RSI"], data["BB_Lower_16_2"], 
-            data["ATR"], data["RSI_DVG"]
-            ]
     )
     data["Bull_BBR_C3"] = data.apply(
         pattern.bullish_bb_reversal_c3,
-        axis=1,
-        args=[data["BB_Lower_16_2"], data["BBL_BO"]]
+        axis=1
     )
     data["Bull_BBR_C4"] = data.apply(
         pattern.bullish_bb_reversal_c4,
-        axis=1,
-        args=[data["BB_Lower_16_2"]]
+        axis=1
     )
     data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
 
@@ -235,11 +229,11 @@ if __name__ == '__main__':
     #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
     #     ])
 
-    print(data.query("Bull_BBR_C1 == True"))
-    print(data.query("Bull_BBR_C1 == True").iloc[0:100][[
+    print(data.query("Bull_BBR_C3 == True"))
+    print(data.query("Bull_BBR_C3 == True").iloc[0:100][[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
         "Low_Pct_SMA", "Bull_Engulf", "Piercing", "Hammer",
-        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA", "SMA32_Slope", "SMA16_Slope"]
+        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA", "ILR", "S_R"]
         ])    
     
     # print(data.query("Bear_BBR_V2 == True"))
