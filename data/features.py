@@ -541,10 +541,6 @@ class Pattern():
             self, 
             df:Series, 
             bb_lower: Series, 
-            rsi: Series,
-            rsi_divergence: Series, 
-            sma32_slope: Series,
-            bbl_bo: Series,
             atr: Series
             ):
         """
@@ -561,7 +557,6 @@ class Pattern():
                 and df["Range"] > (prev_open - prev_close) * 0.50 \
                 and df["Close_Pct_High"] <= 0.5 \
                 and self.range.iloc[idx-1] > atr.iloc[idx-1]:
-                #and bbl_bo.iloc[idx-1] == True:
                 return True
 
 
@@ -569,13 +564,7 @@ class Pattern():
             self, 
             df:Series, 
             bb_upper: Series,
-            atr: Series, 
-            sma16_slope: Series,
-            rsi: Series,
-            rsi_dvg: Series,
-            close_pct_high: Series,
-            bbu_bo: Series,
-            sma32_slope: Series
+            atr: Series
             ):
         """
         Returns a boolean on whether a bearish bollinger band reversal occured
@@ -591,150 +580,74 @@ class Pattern():
                 and (df["Range"] > (prev_close - prev_open) * 0.50 \
                 and df["Close_Pct_High"] >= 0.50) \
                 and self.range.iloc[idx-1] > atr.iloc[idx-1]:
-                #and bbu_bo.iloc[idx-1] == True:
                     return True
-            # # case 3 (bb_upper test in downtrend)
-            # elif sma16_slope.iloc[idx] < 0 \
-            #     and df["High"] > bb_upper.iloc[idx] \
-            #     and df["Close"] < bb_upper.iloc[idx]:
-            #         return True
 
     def bearish_bb_reversal_c1(
             self,
             df: Series,
             bbu: Series,
-            sma_trend: Series,
-            period: int = 8
             ):
         """
-        Bearish BBR Case 1 (SigLevel Range)
-        Rejection of Intraday High
+        Bearish BBR Case 1 (Classic BB Reversal)
+        - Previous close above upper band 
+        - Current close below upper band
+        - Close above top 20% of the candle range
         """
         idx = int(df["Idx"])
-        if df["ADR"] > 0 and df["Sig_High"] > 0 \
-        and sma_trend.iloc[idx-period:idx].min() < 2 \
-        and df["Close_Pct_DHigh"] < 0.50:
-            # Open > BBU + Close below through Sig_High
-            if self.open.iloc[idx-1] < bbu.iloc[idx-1] \
-            and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
-            and self.open.iloc[idx-1] < self.close.iloc[idx-1] \
-            and df["Open"] > df["BB_Upper_16_2"] \
-            and df["Close"] < df["BB_Upper_16_2"] \
-            and (self.close.iloc[idx-1] - df["Close"]) > \
-            self.body.iloc[idx-1] * 0.66 \
-            and df["Close"] < df["Sig_High"] \
-            and df["Open"] > df["Sig_High"]:
+        # base signal conditions
+        if self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+        and df["Close"] < df["BB_Upper_16_2"]:
+            # prev close above BBU 
+            # current close below BBU near candle lows
+            if self.close.iloc[idx-1] > bbu.iloc[idx-1] \
+            and df["Close_Pct_High"] > 0.80:
                 return True
-            # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
-            elif df["Shooting_Star"] == True \
-            and df["Range"] > df["ATR"] * 1.25 \
-            and df["High"] > df["BB_Upper_16_2"] \
-            and df["Open"] < df["BB_Upper_16_2"] \
-            and df["Close"] < df["BB_Upper_16_2"] \
-            and df["Low"] > df["Sig_High"]:
-                return True
-            # Open < BBU + High > BBU + Close through Sig_High
-            elif df["High"] > df["BB_Upper_16_2"] \
-            and df["Close"] < df["BB_Upper_16_2"] \
-            and df["Open"] > df["Sig_High"] \
-            and df["Close"] < df["Sig_High"] \
-            and df["Close_Pct_High"] > 0.66:
-                return True
-            # Open < BBU & Sig_High + High > Sig_High & Close < BBU
-            elif df["High"] > df["BB_Upper_16_2"] \
-            and df["Close"] < df["BB_Upper_16_2"] \
-            and df["Open"] < df["Sig_High"] \
-            and df["Close"] < df["Sig_High"] \
-            and df["High"] == df["Iday_High"] \
-            and df["Range"] > df["ATR"]:
-                if self.current_bar(df) == -1 \
-                and (self.close.iloc[idx-1] - df["Close"]) > \
-                self.body.iloc[idx-1] * 0.66:
-                    return True
-                elif df["Shooting_Star"] == True:
-                    return True
 
     def bearish_bb_reversal_c2(
             self,
-            df: Series,
-            rsi: Series,
-            bbu: Series,
-            atr: Series,
-            rsi_dvg: Series
+            df: Series
             ):
         """
-        Bearish BBR Case 2 (Extended Run)
-        Price extension out of SigLevel range
+        Bearish BBR Case 2 (Pinbar Reversal)
+        - Price sharply retraces at key level
+        - Body inside bollinger band
+        - High spikes outside band
         """
         idx = int(df["Idx"])
-        # Shooting_Star reversal above Sig_High + Body < BBU & High > BBU
-        if df["ADR"] > 0 and df["Sig_High"] > 0:
-            if df["Low"] > df["Sig_High"] \
-            and df["Close_Pct_DHigh"] < 0.50:
-                # Bearish Divergence
-                if any([df["RSI_DVG"], rsi_dvg.iloc[idx-1]]) \
-                and self.open.iloc[idx-1] < bbu.iloc[idx-1] \
-                and self.high.iloc[idx-1] > bbu.iloc[idx-1] \
-                and self.close.iloc[idx-1] > self.open.iloc[idx-1] \
-                and self.range.iloc[idx-1] > atr.iloc[idx-1] \
-                and self.current_bar(df) == -1:
-                    if df["Close"] < df["BB_Upper_16_2"]:
-                        # Close 66% of prev body
-                        if self.close.iloc[idx-1] - df["Close"] > \
-                        self.body.iloc[idx-1] * 0.66:
-                            return True
-                        # bearish candlestick
-                        elif any([
-                            df["Shooting_Star"], df["Dark_Cloud"], 
-                            df["Bear_Engulf"], df["Hammer"],
-                            ]):
-                            return True
-                        # candle body 66% outside of BBU
-                        elif (df["Close"] - df["BB_Upper_16_2"]) > \
-                        df["Body"] * 0.66:
-                            return True
-                    # positive shooting star outside of band
-                    if df["Close"] > df["BB_Upper_16_2"] \
-                    and df["Open"] < df["BB_Upper_16_2"] \
-                    and df["Shooting_Star"] == True:
-                        return True
-                # No divergence
-                elif rsi.iloc[idx-1] > 70 \
-                and self.open.iloc[idx-1] < bbu.iloc[idx-1] \
-                and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
-                and df["RSI"] < 70 \
-                and df["Close"] < df["BB_Upper_16_2"] \
-                and self.current_bar(df) == -1:
+        lower_candle_range = 0.66 if self.current_bar(df) == -1 else 0.50
+        # pinbar reversal pattern
+        if df["UWick"] >= (df["Body"] * 2) \
+        and df["High"] > df["BB_Upper_16_2"] \
+        and df["Open"] < df["BB_Upper_16_2"] \
+        and df["Close"] < df["BB_Upper_16_2"] \
+        and df["Close"] > df["SMA16"] \
+        and df["Close_Pct_High"] > lower_candle_range:
+            # sig_high
+            if df["IHR"] == True:
                     return True
+            # yday_high
+            if df["High"] > df["Yday_High"] \
+                and df["Close"] < df["Yday_High"]:
+                return True
+            # support level
+            if df["S_R"] == 1 \
+            and df["IHR"] is None:
+                return True
         
     def bearish_bb_reversal_c3(
             self,
-            df: Series,
-            bbu: Series,
-            bbu_bo: Series
+            df: Series
             ):
         """
         Bearish BBR Case 3 (Price Exhaustion)
         Price open and close above Upper Band
         """
-        idx = int(df["Idx"])
-        # Current bar outside BBU
+        # Candle outside BBL
         if df["Open"] > df["BB_Upper_16_2"] \
         and df["Close"] > df["BB_Upper_16_2"] \
-        and df["Close_Pct_DHigh"] < 0.50:
-            if bbu_bo.iloc[idx-1] == True \
-            and df["Range"] > df["ATR"]:
-                if df["Close_Pct_High"] > 0.66:
-                    return True
-                elif df["Shooting_Star"]:
-                    return True
-        # Prev bar outside BBU
-        if self.open.iloc[idx-1] > bbu.iloc[idx-1] \
-        and self.close.iloc[idx-1] > bbu.iloc[idx-1] \
         and df["Close_Pct_DHigh"] < 0.50 \
-        and self.current_bar(df) == -1 \
-        and df["Close"] < self.low.iloc[idx-1] \
-        and df["Range"] > df["ATR"]:
+        and df["Close_Pct_SMA"] > 0.1 \
+        and df["Range"] > df["ATR"] * 0.5:
             return True
 
     def bearish_bb_reversal_c4(
@@ -748,14 +661,12 @@ class Pattern():
         """
         idx = int(df["Idx"])
         if df["High_Pct_SMA"] > 0.3 \
+        and df["Bear_BBR_C3"] is None \
         and df["High"] > df["BB_Upper_16_2"]:
-            if df["RSI_DVG"] == True:
-                if any([df["Shooting_Star"], df["Bear_Engulf"], df["Dark_Cloud"]]) \
-                and df["Range"] > df["ATR"] * 1.25:
-                    return True
-                elif df["Close_Pct_High"] > 0.66:
-                    if df["Range"] > df["ATR"] * 1:
-                        return True
+            if df["RSI_DVG"] == True \
+            and df["High"] > self.high.iloc[idx-1] \
+            and df["Close"] < self.high.iloc[idx-1]:
+                return True
         
         
     def bearish_bb_reversal_v2(self, df:Series):
@@ -776,18 +687,16 @@ class Pattern():
             ):
         """
         Bullish BBR Case 1 (Classic BB Reversal)
-        - Previous open under lower band 
+        - Previous close under lower band 
         - Current close above lower band
         - Close above top 20% of the candle range
         """
         idx = int(df["Idx"])
         # base signal conditions
-        pct10_yday_range = (df["Yday_High"] - df["Yday_Low"]) * 0.10
-        if df["Range"] > pct10_yday_range \
-        and self.close.iloc[idx-1] < self.open.iloc[idx-1] \
+        if self.close.iloc[idx-1] < self.open.iloc[idx-1] \
         and df["Close"] > df["BB_Lower_16_2"]:
             # prev open below BBL and close above BBL and candle highs
-            if self.open.iloc[idx-1] < bbl.iloc[idx-1] \
+            if self.close.iloc[idx-1] < bbl.iloc[idx-1] \
             and df["Close_Pct_High"] < 0.20:
                 return True
                 
@@ -830,13 +739,12 @@ class Pattern():
         Bullish BBR Case 3 (Price Exhaustion)
         Price open and close below Lower Band
         """
-        idx = int(df["Idx"])
         # Candle outside BBL
         if df["Open"] < df["BB_Lower_16_2"] \
         and df["Close"] < df["BB_Lower_16_2"] \
         and df["Close_Pct_DHigh"] > 0.50 \
-        and df["Close_Pct_SMA"] > 0.2 \
-        and df["RSI"] < 30:
+        and df["Close_Pct_SMA"] > 0.1 \
+        and df["Range"] > df["ATR"] * 0.5:
             return True
 
     def bullish_bb_reversal_c4(
@@ -849,14 +757,12 @@ class Pattern():
         """
         idx = int(df["Idx"])
         if df["Low_Pct_SMA"] > 0.3 \
+        and df["Bull_BBR_C3"] is None \
         and df["Low"] < df["BB_Lower_16_2"]:
-            if df["RSI_DVG"] == True:
-                if any([df["Hammer"], df["Bull_Engulf"], df["Piercing"]]) \
-                and df["Range"] > df["ATR"] * 1.25:
-                    return True
-                elif df["Close_Pct_High"] < 0.34:
-                    if df["Range"] > df["ATR"] * 1:
-                        return True
+            if df["RSI_DVG"] == True \
+            and df["Low"] < self.low.iloc[idx-1] \
+            and df["Close"] > self.low.iloc[idx-1]:
+                return True
             
     def bullish_bb_reversal_v2(self, df:Series):
         """All bullish bb reversal signals"""
@@ -894,35 +800,60 @@ class Pattern():
             and df["High"] == df["Iday_High"]:
                 return True
             
-    def support_resistance(self, df: Series):
-        """Return whether price failed at broke through a significant level
+    def support_resistance(
+            self, 
+            df: Series, 
+            sig_high: Series, 
+            sig_low: Series
+            ):
+        """Return whether price failed at or broke through a significant level
         
-        - 1 = Test of Resistance
-        - 2 = Broken Resistance
-        - 3 = Test of Support
-        - 4 = Broken Support
+        - 1 = Resistance Test
+        - 2 = Resistance Break
+        - 3 = Support Test
+        - 4 = Support Break
         """
-
-        if df["Open"] < df["Sig_High"]:
-            if df["High"] >= df["Sig_High"] and df["Close"] < df["Sig_High"]:
-                return 1
-            elif df["Close"] > df["Sig_High"]:
-                return 2
-        if df["Open"] > df["Sig_High"]:
-            if df["Low"] <= df["Sig_High"] and df["Close"] > df["Sig_High"]:
-                return 3
-            elif df["Close"] < df["Sig_High"]:
-                return 4
-        if df["Open"] < df["Sig_Low"]:
-            if df["High"] >= df["Sig_Low"] and df["Close"] < df["Sig_Low"]:
-                return 1
-            elif df["Close"] > df["Sig_Low"]:
-                return 2
-        if df["Open"] > df["Sig_Low"]:
-            if df["Low"] <= df["Sig_Low"] and df["Close"] > df["Sig_Low"]:
-                return 3
-            elif df["Close"] < df["Sig_Low"]:
-                return 4
+        idx = int(df["Idx"])
+        start = idx - df["Iday_Idx"]
+        sig_h = sig_high.iloc[start:idx+1].unique()
+        sig_l = sig_low.iloc[start:idx+1].unique()
+        s_r = None
+        s_r_level = None
+        # # Sig_Highs
+        if len(sig_h) > 0:
+            for i in range(len(sig_h)):
+                if df["Open"] < sig_h[i]:
+                    if df["High"] >= sig_h[i] and df["Close"] < sig_h[i]:
+                        s_r = 1
+                        s_r_level = sig_h[i]
+                    elif df["Close"] > sig_h[i]:
+                        s_r = 2
+                        s_r_level = sig_h[i]
+                if df["Open"] > sig_h[i]:
+                    if df["Low"] <= sig_h[i] and df["Close"] > sig_h[i]:
+                        s_r = 3
+                        s_r_level = sig_h[i]
+                    elif df["Close"] < sig_h[i]:
+                        s_r = 4
+                        s_r_level = sig_h[i]
+        # Sig_Lows
+        if len(sig_l) > 0:
+            for i in range(len(sig_l)):
+                if df["Open"] < sig_l[i]:
+                    if df["High"] >= sig_l[i] and df["Close"] < sig_l[i]:
+                        s_r = 1 
+                        s_r_level = sig_l[i]
+                    elif df["Close"] > sig_l[i]:
+                        s_r = 2 
+                        s_r_level = sig_l[i]
+                if df["Open"] > sig_l[i]:
+                    if df["Low"] <= sig_l[i] and df["Close"] > sig_l[i]:
+                        s_r = 3 
+                        s_r_level = sig_l[i]
+                    elif df["Close"] < sig_l[i]:
+                        s_r = 4 
+                        s_r_level = sig_l[i]
+        return s_r, s_r_level
 
     def bb_upper_breakout(
             self, df: Series, period: int, 
@@ -1104,4 +1035,44 @@ class Pattern():
                 and df["Close"] > df["SMA16"]:
                     return True
                 
-    # reversal candles - bullish engulfing with bullish divergence in downtrend (eg. 2024-04-22 07:15)
+    def s_r_signal(
+            self, 
+            df: Series, 
+            s_r: Series, 
+            close_pct_high: Series, 
+            s_r_level: Series
+            ):
+        """
+        (TESTING ONLY)
+        - S_R_Signal function is used to validate if buy or sell entry was hit
+        - For raw_signal in live trading use S_R and S_R_Level
+        - Limit order at S_R_Level
+        """
+        signal = None 
+        entry = None
+        idx = int(df["Idx"])
+        # support
+        if s_r.iloc[idx-1] == 3 \
+        and close_pct_high.iloc[idx-1] < 0.50 \
+        and df["Low"] < s_r_level.iloc[idx-1]:
+            signal = s_r.iloc[idx-1]
+            entry = s_r_level.iloc[idx-1]
+        if s_r.iloc[idx-2] == 4 \
+        and s_r.iloc[idx-1] == 2 \
+        and close_pct_high.iloc[idx-1] < 0.34 \
+        and df["Low"] < s_r_level.iloc[idx-1]:
+            signal = s_r.iloc[idx-1]
+            entry = s_r_level.iloc[idx-1]
+        # resistance
+        if s_r.iloc[idx-1] == 1 \
+        and close_pct_high.iloc[idx-1] > 0.50 \
+        and df["High"] > s_r_level.iloc[idx-1]:
+            signal = s_r.iloc[idx-1]
+            entry = s_r_level.iloc[idx-1]
+        if s_r.iloc[idx-2] == 2 \
+        and s_r.iloc[idx-1] == 4 \
+        and close_pct_high.iloc[idx-1] > 0.66 \
+        and df["High"] > s_r_level.iloc[idx-1]:
+            signal = s_r.iloc[idx-1]
+            entry = s_r_level.iloc[idx-1]
+        return signal, entry

@@ -122,41 +122,40 @@ def apply_features(data: pd.DataFrame):
     data["Piercing"] = data.apply(pattern.piercing, axis=1)
     data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
     data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
-    data["S_R"] = data.apply(pattern.support_resistance, axis=1)
+    data[["S_R", "S_R_Level"]] = data.apply(
+        pattern.support_resistance, 
+        axis=1,
+        args=[data["Sig_High"], data["Sig_Low"]],
+        result_type='expand'
+        )
     data["BBU_BO"] = data.apply(pattern.bb_upper_breakout, axis=1, args=[8])
     data["BBL_BO"] = data.apply(pattern.bb_lower_breakout, axis=1, args=[8])
     data["Bull_BBR"] = data.apply(
         pattern.bullish_bb_reversal, axis=1, 
         args=[
-            data["BB_Lower_16_2"], data["RSI"], data["RSI_DVG"], 
-            data["SMA32_Slope"], data["BBL_BO"], data["ATR"]
+            data["BB_Lower_16_2"], data["ATR"]
             ]
         ) 
     data["Bear_BBR"] = data.apply(
         pattern.bearish_bb_reversal, axis=1, 
         args=[
-            data["BB_Upper_16_2"], data["ATR"], data["SMA16_Slope"],
-            data["RSI"], data["RSI_DVG"],
-            data["Close_Pct_High"], data["BBU_BO"], data["SMA32_Slope"]
+            data["BB_Upper_16_2"], data["ATR"]
             ]
         )
     # Bearish Reversals
     data["Bear_BBR_C1"] = data.apply(
         pattern.bearish_bb_reversal_c1,
         axis=1,
-        args=[data["BB_Upper_16_2"], data["SMA_Trend"]]
+        args=[data["BB_Upper_16_2"]]
     )
 
     data["Bear_BBR_C2"] = data.apply(
         pattern.bearish_bb_reversal_c2,
-        axis=1,
-        args=[data["RSI"], data["BB_Upper_16_2"], 
-              data["ATR"], data["RSI_DVG"]]
+        axis=1
     )
     data["Bear_BBR_C3"] = data.apply(
         pattern.bearish_bb_reversal_c3,
-        axis=1,
-        args=[data["BB_Upper_16_2"], data["BBU_BO"]]
+        axis=1
     )
     data["Bear_BBR_C4"] = data.apply(
         pattern.bearish_bb_reversal_c4,
@@ -196,6 +195,12 @@ def apply_features(data: pd.DataFrame):
     args=[data["SMA4_Slope_SMA"], data["SMA4"], 
           data["UTrend_BO"], data["Bull_SMA_BO"]]
     )
+    data[["S_R_Signal", "S_R_Entry"]] = data.apply(
+        pattern.s_r_signal,
+        axis=1,
+        args=[data["S_R"], data["Close_Pct_High"], data["S_R_Level"]],
+        result_type='expand'
+    )
 
     return data
 
@@ -222,19 +227,19 @@ if __name__ == '__main__':
     # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
     # ]])
 
-    # print(data.query("BBU_BO == True"))
-    # print(data.query("BBU_BO == True").head(100)[[
-    #     "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
-    #     "Close_Pct_DHigh", "Shooting_Star", "Bear_Engulf", "Dark_Cloud", 
-    #     "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA"]
-    #     ])
-
     print(data.query("Bull_BBR_C3 == True"))
-    print(data.query("Bull_BBR_C3 == True").iloc[0:100][[
+    print(data.query("Bull_BBR_C3 == True").head(100)[[
         "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
-        "Low_Pct_SMA", "Bull_Engulf", "Piercing", "Hammer",
-        "SMA32_Slope_SMA", "SMA16_Slope_SMA", "SMA4_Slope_SMA", "ILR", "S_R"]
-        ])    
+        "Close_Pct_SMA", "Body", 
+        "Open", "High", "Low", "Close"]
+        ])
+
+    # print(data.query("S_R_Signal > 0"))
+    # print(data.query("S_R_Signal > 0").iloc[100:200][[
+    #     "Iday_Range", "ADR", "Range", "ATR",
+    #     "Open", "High", "Low", "Close",
+    #     "S_R_Signal", "S_R_Entry"]
+    #     ])    
     
     # print(data.query("Bear_BBR_V2 == True"))
     # print(data.query("Bear_BBR_V2 == True").tail(100)[[
@@ -243,8 +248,8 @@ if __name__ == '__main__':
     #     ])
 
     # print(data.query("Bull_BBR_V2 == True"))
-    # print(data.query("Bull_BBR_V2 == True").iloc[0:100][[
-    #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
+    # print(data.query("Bull_BBR_V2 == True or Bull_BBR == True").iloc[0:100][[
+    #     "Iday_Range", "ADR", "RSI", "Low_Pct_SMA", "S_R", "Close_Pct_High",
     #     "Bull_BBR_C1", "Bull_BBR_C2", "Bull_BBR_C3", "Bull_BBR_C4"]
     #     ])
 
