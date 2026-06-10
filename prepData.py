@@ -40,6 +40,7 @@ def apply_features(data: pd.DataFrame):
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])    
     
     data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
+    data["SMA8"] = data.apply(indicator.SMA, axis=1, args=[8, data["Close"]])
     data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16, data["Close"]])
     data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32, data["Close"]])
     data["BB_Upper_16_2"] = data.apply(
@@ -189,12 +190,13 @@ def apply_features(data: pd.DataFrame):
     data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
     data["Bull_TC_Candle"] = data.apply(pattern.bullish_trend_candle, axis=1)
-    data["Bull_Momentum"] = data.apply(
-    pattern.bullish_momentum, 
+    data["Bull_BO_Momentum"] = data.apply(
+    pattern.bullish_bo_momentum, 
     axis=1, 
     args=[data["SMA4_Slope_SMA"], data["SMA4"], 
           data["UTrend_BO"], data["Bull_SMA_BO"]]
     )
+    data["Bull_Trend_Momentum"] = data.apply(pattern.bullish_trend_momentum, axis=1)
     data[["S_R_Signal", "S_R_Entry"]] = data.apply(
         pattern.s_r_signal,
         axis=1,
@@ -219,39 +221,35 @@ if __name__ == '__main__':
     # show data
     pd.options.display.max_rows = 100
 
+    base_cols = [
+        "Iday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
+        "SMA_Trend", "SMA4_Slope", "SMA4_Slope_SMA",
+        "SMA16_Slope", "SMA16_Slope_SMA"]
+
     # Print patterns
-    # print(data['2025-04-18 16:30':'2025-04-20 21:00'][[ 
-    # "Iday_Idx","Hammer", "Shooting_Star", "Bull_Engulf", "Bear_Engulf",
-    # "Dark_Cloud", "Piercing", "Bull_BBR", "Bear_BBR",
-    # "Sig_Low", "ILR", "Sig_High", "IHR", "S_R",
-    # "BBU_BO", "BBL_BO", "RSI_DVG", "RSI"
-    # ]])
-
-    print(data.query("Bull_BBR_C3 == True"))
-    print(data.query("Bull_BBR_C3 == True").head(100)[[
-        "Iday_Range", "ADR", "Range", "ATR", "RSI_DVG", "RSI", 
-        "Close_Pct_SMA", "Body", 
-        "Open", "High", "Low", "Close"]
-        ])
-
-    # print(data.query("S_R_Signal > 0"))
-    # print(data.query("S_R_Signal > 0").iloc[100:200][[
-    #     "Iday_Range", "ADR", "Range", "ATR",
-    #     "Open", "High", "Low", "Close",
-    #     "S_R_Signal", "S_R_Entry"]
-    #     ])    
+    # print(data['2024-04-22 17:15':'2024-04-23 16:45'][base_cols])
     
+    # BULLISH MOMENTUM
+    print(data.query("Bull_Trend_Momentum == True"))
+    print(data.query("Bull_Trend_Momentum == True and SMA4_Slope < 45").iloc[0:100][base_cols])
+    
+    # trade idea
+    # sma16_slope > 0 and lower low + higher close
+    
+    # BEARISH REVERSALS
     # print(data.query("Bear_BBR_V2 == True"))
     # print(data.query("Bear_BBR_V2 == True").tail(100)[[
     #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
     #     "Bear_BBR_C1", "Bear_BBR_C2", "Bear_BBR_C3", "Bear_BBR_C4"]
     #     ])
 
+    # BULLISH REVERSALS
     # print(data.query("Bull_BBR_V2 == True"))
     # print(data.query("Bull_BBR_V2 == True or Bull_BBR == True").iloc[0:100][[
     #     "Iday_Range", "ADR", "RSI", "Low_Pct_SMA", "S_R", "Close_Pct_High",
     #     "Bull_BBR_C1", "Bull_BBR_C2", "Bull_BBR_C3", "Bull_BBR_C4"]
     #     ])
 
+    # WRITE TO CSV
     # output feature enhanced price data to csv
     # data.to_csv(f"{OUT_PATH}/FE_{FILE}")

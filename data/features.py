@@ -957,7 +957,7 @@ class Pattern():
         and df["Close_Pct_High"] < 0.34:
             return True
         
-    def bullish_momentum(
+    def bullish_bo_momentum(
             self, 
             df: Series, 
             sma4_slope_sma: Series,
@@ -966,7 +966,7 @@ class Pattern():
             bullish_sma_bo: Series
             ):
             """
-            Bullish momentum in bearish retracement or uptrend
+            Bullish momentum after a breakout
 
             - TP = 1:1 R/R (ATR)
             """
@@ -997,20 +997,34 @@ class Pattern():
                             break 
                     if closed_below_sma4 is False:
                         return True
-                # close above prev bar high
-                # close > sma4
-                # limit order 0.5 prev_body if open_pct_high > 0.66 and 
-                # limit order at prev_open if open_pct_high < 0.66
-                if df["Close"] > df["SMA4"] \
-                and self.current_bar(df) == 1 \
-                and df["Close"] > self.high.iloc[idx-1] \
-                and df["Close_Pct_High"] < 0.34:
-                    # slope > 45
-                    if (df["SMA4_Slope"] > 45):
-                        return True
-                    # positive slope and slope_sma (> 22.5) 
-                    if df["SMA4_Slope_SMA"] > 22.5 and df["SMA4_Slope"] > 22.5:
-                        return True
+
+    def bullish_trend_momentum(
+            self, 
+            df: Series
+            ):
+            """
+            Bullish momentum during a retracement or uptrend
+            """
+            idx = int(df["Idx"])
+            # low condition
+            low_condition = None 
+            if self.close.iloc[idx-1] > self.open.iloc[idx-1] \
+            and df["Low"] < self.low.iloc[idx-1] \
+            and df["Close"] > self.high.iloc[idx-1]:
+                low_condition = True
+            if df["Low"] > self.low.iloc[idx-1] \
+            and df["Close"] > self.high.iloc[idx-1]:
+                low_condition = True
+            # sharp momentum along the SMA4 Slope
+            if df["SMA4_Slope"] >= 45 \
+            and low_condition is True:
+                return True
+            # SMA16 uptrend (covers SMA4 Slope pullbacks)
+            elif df["SMA4_Slope"] > 22.5 \
+            and low_condition is True \
+            and df["Body"] > df["ATR"]:
+                return True
+                
 
     def bullish_trend_candle(self, df: Series):
         """
