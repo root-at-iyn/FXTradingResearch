@@ -956,6 +956,26 @@ class Pattern():
         and df["Close"] > high_4.max() \
         and df["Close_Pct_High"] < 0.34:
             return True
+
+    def bearish_sma_breakout(self, df: Series):
+        """
+        Breakout of SMA consolidation or bullish retracement
+        continuing downtrend
+        """
+        idx = int(df["Idx"])
+        sma_all = Series([df["SMA4"], df["SMA16"], df["SMA32"]])
+        body_4 = self.body.iloc[idx-4:idx]
+        range_4 = self.range.iloc[idx-4:idx]
+        low_4 = self.low.iloc[idx-4:idx]
+        if df["Open"] > sma_all.max() \
+        and df["Close"] < sma_all.min() \
+        and df["Range"] > range_4.max() \
+        and df["Body"] > body_4.max() \
+        and df["Body"] > self.body.iloc[idx-1] * 2 \
+        and df["Range"] > df["ATR"] * 1.25 \
+        and df["Close"] < low_4.max() \
+        and df["Close_Pct_High"] > 0.66:
+            return True
         
     def bullish_bo_momentum(
             self, 

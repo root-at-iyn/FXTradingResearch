@@ -189,6 +189,7 @@ def apply_features(data: pd.DataFrame):
     data["UTrend_BO"] = data.apply(pattern.uptrend_breakout, axis=1)
     data["Bull_TC"] = data.apply(pattern.bullish_trend_continuation, axis=1)
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
+    data["Bear_SMA_BO"] = data.apply(pattern.bearish_sma_breakout, axis=1)
     data["Bull_TC_Candle"] = data.apply(pattern.bullish_trend_candle, axis=1)
     data["Bull_BO_Momentum"] = data.apply(
     pattern.bullish_bo_momentum, 
@@ -230,8 +231,11 @@ if __name__ == '__main__':
     # print(data['2024-04-22 17:15':'2024-04-23 16:45'][base_cols])
     
     # BULLISH MOMENTUM
-    print(data.query("Bull_Trend_Momentum == True"))
-    print(data.query("Bull_Trend_Momentum == True and SMA4_Slope < 45").iloc[0:100][base_cols])
+    # print(data.query("Bull_Trend_Momentum == True"))
+    # print(data.query("Bull_Trend_Momentum == True and SMA4_Slope < 45").iloc[0:100][base_cols])
+
+    print(data.query("Bear_SMA_BO == True"))
+    print(data.query("Bear_SMA_BO == True").iloc[0:100][base_cols])
     
     # trade idea
     # sma16_slope > 0 and lower low + higher close
