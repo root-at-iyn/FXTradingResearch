@@ -39,7 +39,8 @@ def apply_features(data: pd.DataFrame):
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
     # Average True Range
-    data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])    
+    data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])
+    data["ATR4"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],4])
     # Simple Moving Averages
     data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
     data["SMA8"] = data.apply(indicator.SMA, axis=1, args=[8, data["Close"]])
@@ -230,34 +231,9 @@ if __name__ == '__main__':
         "SMA16_Slope", "SMA16_Slope_SMA", "Close_Pct_SMA"]
 
     # Print patterns
-    # print(data['2024-04-22 17:15':'2024-04-23 16:45'][base_cols])
-    
-    # BULLISH MOMENTUM
-    # print(data.query("Bull_Trend_Momentum == True"))
-    # print(data.query("Bull_Trend_Momentum == True and SMA4_Slope < 45").iloc[0:100][base_cols])
-
-    print(data.query("Bear_TC == True or Bull_TC == True"))
-    print(data.query("Bear_TC == True or Bull_TC == True").iloc[0:100][base_cols])
-    
-    # trade idea
-    # if Iday_High has been broken since the start of the day
-    # and Iday_Low has been broken since start of day 
-    # then the day is likely ranging
-    
-    # BEARISH REVERSALS
-    # print(data.query("Bear_BBR_V2 == True"))
-    # print(data.query("Bear_BBR_V2 == True").tail(100)[[
-    #     "Iday_Range", "ADR", "SMA_Trend", "Close_Pct_SMA", "SMA32_Slope", "SMA16_Slope",
-    #     "Bear_BBR_C1", "Bear_BBR_C2", "Bear_BBR_C3", "Bear_BBR_C4"]
-    #     ])
-
-    # BULLISH REVERSALS
-    # print(data.query("Bull_BBR_V2 == True"))
-    # print(data.query("Bull_BBR_V2 == True or Bull_BBR == True").iloc[0:100][[
-    #     "Iday_Range", "ADR", "RSI", "Low_Pct_SMA", "S_R", "Close_Pct_High",
-    #     "Bull_BBR_C1", "Bull_BBR_C2", "Bull_BBR_C3", "Bull_BBR_C4"]
-    #     ])
+    # print(data['2025-03-11 17:15':'2025-03-12 16:45'][base_cols])
+    print(data)
 
     # WRITE TO CSV
     # output feature enhanced price data to csv
-    # data.to_csv(f"{OUT_PATH}/FE_{FILE}")
+    data.to_csv(f"{OUT_PATH}/FE_{FILE}")
