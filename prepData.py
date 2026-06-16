@@ -2,7 +2,7 @@ import pandas as pd
 from data.features import Candle, Intraday, Indicator, Pattern
 
 
-def apply_features(data: pd.DataFrame):
+def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     """Apply features and indicators to OHLC dataframe"""
 
     # set date to datetimeindex
@@ -91,15 +91,18 @@ def apply_features(data: pd.DataFrame):
     # SMA Slope
     data["SMA4_Slope"] = data.apply(
         indicator.sma_slope, axis=1, 
-        args=[data["SMA4"]]
+        args=[data["SMA4"]],
+        pipsize=pipsize
         )
     data["SMA16_Slope"] = data.apply(
         indicator.sma_slope, axis=1, 
-        args=[data["SMA16"]]
+        args=[data["SMA16"]],
+        pipsize=pipsize
         )
     data["SMA32_Slope"] = data.apply(
         indicator.sma_slope, axis=1, 
-        args=[data["SMA32"]]
+        args=[data["SMA32"]],
+        pipsize=pipsize
         )
     data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[4, data["SMA4_Slope"]])
@@ -137,7 +140,8 @@ def apply_features(data: pd.DataFrame):
     data[["BBU_BO","BBL_BO"]] = data.apply(
         pattern.bb_breakout, 
         axis=1, 
-        result_type='expand'
+        result_type='expand',
+        pipsize=pipsize
         )
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
     data["Bear_SMA_BO"] = data.apply(pattern.bearish_sma_breakout, axis=1)
@@ -215,12 +219,14 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    FILE = "GBPUSD_15mins_1yr_End_20250311.csv"
+    SYMBOL = "USDCHF"
+    FILE = f"{SYMBOL}_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
     # apply features to dataframe
-    data = apply_features(df)
+    data = apply_features(df, pipsize=0.0001)
+    data["Symbol"] = SYMBOL
      
     # show data
     pd.options.display.max_rows = 100

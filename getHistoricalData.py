@@ -9,7 +9,7 @@ def waitForHistoricalData(app: IBClient):
     t = time.time()
     s = 0
     while app.isHistoricalDataEnded is False:
-        if s > 60:
+        if s > 180:
             print(f"Time exceeded!: {s}")
             break
         elif app.error_codes[-1] == 162:
@@ -64,20 +64,24 @@ def getEarliestDataTimestamp(app: IBClient, contract: Contract):
 if __name__ == '__main__':
 
     PATH = "./output"
-    FILE = "GBPUSD_15mins_1yr_End_20260311.csv"
+    BASE = "USD"
+    QUOTE = "JPY"
+    SYMBOL = BASE + QUOTE
+    YEAR = "2026"
+    FILE = f"{SYMBOL}_15mins_1yr_End_{YEAR}0311.csv"
 
     mycontract = Contract()
-    mycontract.symbol = "GBP"
+    mycontract.symbol = BASE
     mycontract.secType = "CASH"
     mycontract.exchange = "IDEALPRO"
-    mycontract.currency = "USD"
+    mycontract.currency = QUOTE
     
     app = IBClient()
     app.ibapiConnect()
     price_df: DataFrame = getFXHistoricalData(
         app, 
         mycontract, 
-        end_date_ts="20260312 17:00:00 US/Eastern"
+        end_date_ts=f"{YEAR}0312 17:00:00 US/Eastern"
         )
     
     price_df.to_csv(f"{PATH}/{FILE}")
