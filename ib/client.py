@@ -1,5 +1,6 @@
-from ibapi.client import EClient,ClientException
-from ibapi.wrapper import EWrapper, OrderId, BarData
+from decimal import Decimal
+from ibapi.client import EClient,ClientException, RealTimeBar
+from ibapi.wrapper import EWrapper, OrderId, BarData, TickerId
 from ibapi import __version__ as ibapi_version
 import threading
 import datetime
@@ -86,3 +87,6 @@ class IBClient(EClient, EWrapper):
         except (ClientException, TypeError) as e:
             print(e)
 
+    def realtimeBar(self, reqId: TickerId, time: int, open_: float, high: float, low: float, close: float, volume: Decimal, wap: Decimal, count: int):
+        print("RealTimeBar. TickerId:", RealTimeBar(datetime.datetime.fromtimestamp(time), -1, open_, high, low, close, volume, wap, count))
+        return super().realtimeBar(reqId, time, open_, high, low, close, volume, wap, count)
