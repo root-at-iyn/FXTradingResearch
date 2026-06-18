@@ -36,6 +36,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     # Daily References
     data["Yday_High"] = data.apply(indicator.yesterday_high, axis=1)
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
+    data["Yday_Range"] = data.apply(indicator.yesterday_range, axis=1)
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
     # Average True Range
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    SYMBOL = "USDCHF"
+    SYMBOL = "GBPUSD"
     FILE = f"{SYMBOL}_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data

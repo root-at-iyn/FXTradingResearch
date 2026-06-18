@@ -81,9 +81,10 @@ class IBClient(EClient, EWrapper):
         try:
             print("Connecting to IBKR ...")
             self.connect(HOST, PORT, CLIENT_ID)
-            print(f"Connected: {HOST}:{PORT}:{CLIENT_ID}")
             threading.Thread(target=self.run).start()
             time.sleep(1)
+            if self.isConnected():
+                print(f"Connected: {HOST}:{PORT}:{CLIENT_ID}")
         except (ClientException, TypeError) as e:
             print(e)
 

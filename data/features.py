@@ -165,6 +165,11 @@ class Indicator():
 
         return self.yday_low
     
+    def yesterday_range(self, df: Series):
+        """Return the range of yesterday's session"""
+        if df["Yday_High"] is not None:
+            return df["Yday_High"] - df["Yday_Low"]
+    
     def ADR(self, df: Series, period: int):
         """Returns the average daily range for `period` trading sessions"""
 
@@ -1063,7 +1068,7 @@ class Pattern():
             if df["SMA4_Slope"] >= 45 \
             and low_condition is True:
                 return True
-            # SMA16 uptrend (covers SMA4 Slope pullbacks)
+            # SMA4 uptrend (covers SMA4 Slope pullbacks)
             elif df["SMA4_Slope"] > 22.5 \
             and low_condition is True \
             and df["Body"] > df["ATR"]:
