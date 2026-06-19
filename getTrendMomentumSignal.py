@@ -10,7 +10,7 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
         app.nextId(),
         contract,
         "", # empty str to get most recent data
-        "32 D",
+        "1 D",
         "15 mins",
         "MIDPOINT",
         0, # get data out of RTH
@@ -63,14 +63,21 @@ if __name__ == '__main__':
     #get data
     base = "GBP"
     quote = "USD"
+    tp = 1.5
+    sl = 1
     df = getRecentHistoricalData(base, quote)
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
     # apply features to dataframe
     data = apply_trend_momentum(df, pipsize=0.0001)
     data["Symbol"] = base + quote
+    data["Entry"] = data.apply(lambda x: x["Close"], axis=1)
+    data["SL"] = data.apply(lambda x: x["ATR4"] * sl, axis=1)
+    data["TP"] = data.apply(lambda x: x["ATR4"] * tp, axis=1)
      
     # show data
     pd.options.display.max_rows = 100
-    cols = ["Open", "High", "Low", "Close", "Range", "SMA4_Slope", "Bull_TM", "Bear_TM", "ATR4", "ADR"]
-    print(data[cols].tail(100))
+    cols = ["Open", "High", "Low", "Close", "Range", "SMA4_Slope", "Bull_TM", "Bear_TM", "ATR4"]
+    trade_entry = ["Symbol","SMA4_Slope","Bull_TM", "Bear_TM","Entry", "SL", "TP"]
+    print(data[cols].tail(100),"\n")
+    print(data[trade_entry].tail(1))
