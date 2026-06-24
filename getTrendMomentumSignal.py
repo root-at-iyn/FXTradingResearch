@@ -10,7 +10,7 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
         app.nextId(),
         contract,
         "", # empty str to get most recent data
-        "1 D",
+        "32 D",
         "15 mins",
         "MIDPOINT",
         0, # get data out of RTH
@@ -77,7 +77,10 @@ if __name__ == '__main__':
      
     # show data
     pd.options.display.max_rows = 100
-    cols = ["Open", "High", "Low", "Close", "Range", "SMA4_Slope", "Bull_TM", "Bear_TM", "ATR4"]
-    trade_entry = ["Symbol","SMA4_Slope","Bull_TM", "Bear_TM","Entry", "SL", "TP"]
+    cols = ["Close_Pct_SMA", "SMA4_Slope_SMA", "SMA4_Slope", 
+            "Bull_TM", "Bear_TM", "ATR4", "Bull_BBR_V2", "Bear_BBR_V2"]
+    trade_entry = ["Symbol","SMA4_Slope","Bull_TM", "Bear_TM","Bull_BBR_V2", "Bear_BBR_V2", 
+                   "Entry", "SL", "TP", "Iday_Range", "ADR"]
     print(data[cols].tail(100),"\n")
+    #data.to_csv(f"./research/price_data/FE_{base}{quote}_latest.csv")
     print(data[trade_entry].tail(1))

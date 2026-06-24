@@ -183,6 +183,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
         axis=1,
+        args=[data["Hammer"], data["Shooting_Star"]],
         result_type='expand'
         )
     data[["Bull_TC_Candle", "Bear_TC_Candle"]] = data.apply(
