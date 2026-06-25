@@ -10,7 +10,7 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
         app.nextId(),
         contract,
         "", # empty str to get most recent data
-        "32 D",
+        "2 D",
         "15 mins",
         "MIDPOINT",
         0, # get data out of RTH
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     #get data
     base = "GBP"
     quote = "USD"
-    tp = 1.5
+    tp = 1 # 1.25 for TC (trend continuation)
     sl = 1
     df = getRecentHistoricalData(base, quote)
     #clean IBKR data
@@ -77,10 +77,10 @@ if __name__ == '__main__':
      
     # show data
     pd.options.display.max_rows = 100
-    cols = ["Close_Pct_SMA", "SMA4_Slope_SMA", "SMA4_Slope", 
-            "Bull_TM", "Bear_TM", "ATR4", "Bull_BBR_V2", "Bear_BBR_V2"]
-    trade_entry = ["Symbol","SMA4_Slope","Bull_TM", "Bear_TM","Bull_BBR_V2", "Bear_BBR_V2", 
-                   "Entry", "SL", "TP", "Iday_Range", "ADR"]
+    cols = ["Entry", "SMA4_Slope", 
+            "Bull_TM", "Bear_TM", "ATR4", "Bull_BBR_V2", "Bear_BBR_V2", "Bull_TC", "Bear_TC"]
+    trade_entry = ["Symbol", "Bull_TM", "Bear_TM","Bull_BBR_V2", "Bear_BBR_V2","Bull_TC", "Bear_TC", 
+                   "Entry", "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range"]
     print(data[cols].tail(100),"\n")
     #data.to_csv(f"./research/price_data/FE_{base}{quote}_latest.csv")
     print(data[trade_entry].tail(1))

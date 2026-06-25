@@ -94,6 +94,9 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         data["Body"]
         )
     
+    # Candlestick Patterns
+    data["Hammer"] = data.apply(pattern.hammer, axis=1)
+    data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
     # Bullish Trend Momentum
     data["Bull_TM"] = data.apply(
         pattern.bullish_trend_momentum, axis=1
@@ -101,6 +104,12 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     # Bearish Trend momentum
     data["Bear_TM"] = data.apply(
         pattern.bearish_trend_momentum, axis=1
+        )
+    data[["Bull_TC", "Bear_TC"]] = data.apply(
+        pattern.trend_continuation, 
+        axis=1,
+        args=[data["Hammer"], data["Shooting_Star"]],
+        result_type='expand'
         )
     
     # Intraday Range Reversals

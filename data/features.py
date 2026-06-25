@@ -918,7 +918,6 @@ class Pattern():
         if df["High"] < self.high.iloc[idx-1] \
         and df["Low"] < self.low.iloc[idx-1] \
         and df["Close"] > self.close.iloc[idx-1] \
-        and df["Close"] < df["SMA4"] \
         and df["SMA4_Slope"] > 45:
             bullish_trend_continuation = True    
         
@@ -942,7 +941,6 @@ class Pattern():
         if df["High"] > self.high.iloc[idx-1] \
         and df["Low"] > self.low.iloc[idx-1] \
         and df["Close"] < self.close.iloc[idx-1] \
-        and df["Close"] > df["SMA4"] \
         and df["SMA4_Slope"] < -45:
             bearish_trend_continuation = True
         # return data
