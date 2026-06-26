@@ -64,8 +64,8 @@ def getEarliestDataTimestamp(app: IBClient, contract: Contract):
 if __name__ == '__main__':
 
     PATH = "./output"
-    BASE = "USD"
-    QUOTE = "JPY"
+    BASE = "NZD"
+    QUOTE = "USD"
     SYMBOL = BASE + QUOTE
     YEAR = "2026"
     FILE = f"{SYMBOL}_15mins_1yr_End_{YEAR}0311.csv"
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     mycontract.currency = QUOTE
     
     app = IBClient()
-    app.ibapiConnect()
+    app.ibapiConnect(PORT=7496)
     price_df: DataFrame = getFXHistoricalData(
         app, 
         mycontract, 

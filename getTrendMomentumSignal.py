@@ -61,9 +61,9 @@ def getRecentHistoricalData(
 
 if __name__ == '__main__':
     #get data
-    base = "GBP"
+    base = "EUR"
     quote = "USD"
-    tp = 1 # 1.25 for TC (trend continuation)
+    tp = 1.25 # 1 for TM / 2 for BBR
     sl = 1
     df = getRecentHistoricalData(base, quote)
     #clean IBKR data

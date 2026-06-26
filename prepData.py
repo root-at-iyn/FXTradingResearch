@@ -221,7 +221,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    SYMBOL = "GBPUSD"
+    SYMBOL = "USDCAD"
     FILE = f"{SYMBOL}_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data
