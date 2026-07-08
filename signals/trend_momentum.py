@@ -24,8 +24,11 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Iday_Idx"] = data.apply(intraday.index, axis=1, args=[data.index])
     data["Iday_High"] = data.apply(intraday.high, axis=1)
     data["Iday_Low"] = data.apply(intraday.low, axis=1)
+    data["Iday_HClose"] = data.apply(intraday.highest_close, axis=1)
+    data["Iday_LClose"] = data.apply(intraday.lowest_close, axis=1)
     data["Iday_Range"] = data.apply(intraday.range, axis=1)
     data["Close_Pct_DHigh"] = data.apply(intraday.close_pct_iday_high, axis=1)
+    data["Open_Pct_DHigh"] = data.apply(intraday.open_pct_iday_high, axis=1)
     # indicators
     indicator = Indicator()
     # Daily References
@@ -40,6 +43,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     # Simple Moving Averages
     data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
     data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16, data["Close"]])
+    data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32, data["Close"]])
     # Bollinger Bands
     data["BB_Upper_16_2"] = data.apply(
         indicator.bollinger_band_upper, 
@@ -71,8 +75,20 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         args=[data["SMA4"]],
         pipsize=pipsize
         )
+    data["SMA16_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA16"]],
+        pipsize=pipsize
+        )
+    data["SMA32_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA32"]],
+        pipsize=pipsize
+        )
     data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[4, data["SMA4_Slope"]])
+    data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[32, data["SMA4_Slope"]])
     # Significant Levels
     data["Sig_High"] = data.apply(
         indicator.significant_high, 
@@ -84,6 +100,13 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1, 
         args=[data["Iday_Low"], data["Day_Idx"]]
         )
+    # SMA Trend
+    data["SMA_Trend"] = data.apply(
+        indicator.sma_trend, 
+        axis=1, 
+        args=["SMA4","SMA16","SMA32"]
+        )
+    
     # Patterns
     pattern = Pattern(
         data["Open"],
@@ -143,6 +166,24 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_BBR_C3"] = data.apply(pattern.bullish_bb_reversal_c3, axis=1)
     data["Bull_BBR_C4"] = data.apply(pattern.bullish_bb_reversal_c4, axis=1)
     data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
+
+    # Range Strength
+    data["BRS"] = data.apply(
+        pattern.bar_range_strength, 
+        axis=1, 
+        args=[data["SMA4_Slope"]]
+        )
+    data["RS_SMA"] = data["BRS"].rolling(4).mean()
+
+    # Extreme Momentum
+    data[["Bull_XM", "Bear_XM"]] = data.apply(
+        pattern.extreme_momentum,
+        axis=1,
+        args=[data["BB_Upper_16_2"], data["BB_Lower_16_2"], 
+              data["Iday_HClose"], data["Iday_LClose"],
+              data["SMA4_Slope"], data["SMA_Trend"],data["ATR4"]],
+        result_type='expand'
+    )
 
     # return data
     return data

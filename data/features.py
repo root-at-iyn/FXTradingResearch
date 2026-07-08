@@ -67,6 +67,8 @@ class Intraday():
         self.index_count = 0
         self.dhigh = 0
         self.dlow = 0
+        self.dhighest_close = 0
+        self.dlowest_close = 0
 
     def index(self, df: Series, dt_index: DatetimeIndex, hr=16, min=45):
         """Returns the intraday index
@@ -96,6 +98,16 @@ class Intraday():
             self.dhigh = df["High"]
     
         return self.dhigh
+
+    def highest_close(self, df: Series):
+        """Returns the highest close of the intraday session"""
+        
+        if df["Iday_Idx"] == 0:
+            self.dhighest_close = df["Close"]
+        elif df["Close"] > self.dhighest_close:
+            self.dhighest_close = df["Close"]
+    
+        return self.dhighest_close
         
     def low(self, df: Series):
         """Returns the low of the intraday session"""
@@ -106,6 +118,16 @@ class Intraday():
             self.dlow = df["Low"]
     
         return self.dlow
+    
+    def lowest_close(self, df: Series):
+        """Returns the highest close of the intraday session"""
+        
+        if df["Iday_Idx"] == 0:
+            self.dlowest_close = df["Close"]
+        elif df["Close"] < self.dlowest_close:
+            self.dlowest_close = df["Close"]
+    
+        return self.dlowest_close
     
     def range(self, df: Series):
         """Returns the range of the intrday session"""
@@ -467,6 +489,21 @@ class Pattern():
             if (df["LWick"] >= (df["Body"] * 2)) \
                 and df["Body"] > df["UWick"]:
                 return True
+    def bullish_pinbar(self, df: Series):
+        """Returns a boolean on whether a bullish pin bar pattern occured"""
+        if (df["LWick"] >= (df["Body"] * 2)) \
+        and df["Close_Pct_High"] < 0.45:
+            return True
+        else:
+            False
+        
+    def bearish_pinbar(self, df: Series):
+        """Returns a boolean on whether a bearish pin bar pattern occured"""
+        if (df["UWick"] >= (df["Body"] * 2)) \
+        and df["Close_Pct_High"] > 0.55:
+            return True
+        else:
+            False
     
     def shooting_star(self, df: Series):
         """Returns a boolean on whether a shooting star pattern occured"""
@@ -604,10 +641,13 @@ class Pattern():
         and df["Close"] < df["BB_Upper_16_2"]:
             # prev close above BBU 
             # current close below BBU near candle lows
-            if self.close.iloc[idx-1] > bbu.iloc[idx-1] \
-            and df["Close_Pct_High"] > 0.66:
-                return True
-
+            if self.close.iloc[idx-1] > bbu.iloc[idx-1]:
+                if df["Close_Pct_High"] > 0.66:
+                    return True
+                elif self.close.iloc[idx-1] - df["Close"] / \
+                self.body.iloc[idx-1] > 0.80:
+                    return True
+                
     def bearish_bb_reversal_c2(
             self,
             df: Series
@@ -700,9 +740,12 @@ class Pattern():
         if self.close.iloc[idx-1] < self.open.iloc[idx-1] \
         and df["Close"] > df["BB_Lower_16_2"]:
             # prev open below BBL and close above BBL and candle highs
-            if self.close.iloc[idx-1] < bbl.iloc[idx-1] \
-            and df["Close_Pct_High"] < 0.34:
-                return True
+            if self.close.iloc[idx-1] < bbl.iloc[idx-1]:
+                if df["Close_Pct_High"] < 0.34:
+                    return True
+                elif df["Close"] - self.close.iloc[idx-1] /\
+                self.body.iloc[idx-1] > 0.80:
+                    return True
                 
     def bullish_bb_reversal_c2(
             self,
@@ -887,8 +930,8 @@ class Pattern():
         
     def trend_continuation(self, 
         df: Series,
-        hammer: Series,
-        shooting_star: Series
+        bull_pinbar: Series,
+        bear_pinbar: Series
         ):
         """
         Continuation of bullish trend from SMA support
@@ -901,9 +944,11 @@ class Pattern():
         idx = int(df["Idx"])
         # Uptrend or Consolidation
         # Failed Shooting_Star
-        if shooting_star.iloc[idx-1] is True \
-        and df["High"] > self.high.iloc[idx-1] \
-        and df["Close_Pct_High"] < 0.34:
+        if bear_pinbar.iloc[idx-1] is True \
+        and (df["Close"] - self.low.iloc[idx-1]) / \
+        self.range.iloc[idx-1] > 0.75 \
+        and df["Close_Pct_High"] < 0.34 \
+        and df["Close"] < df["BB_Upper_16_2"]:
             bullish_trend_continuation = True
         # Inside Bar
         if self.range.iloc[idx-1] > df["Range"] \
@@ -911,38 +956,72 @@ class Pattern():
         and df["High"] < self.high.iloc[idx-1] \
         and df["Low"] > self.low.iloc[idx-1] \
         and df["Close"] < df["BB_Upper_16_2"] \
-        and df["Open"] < df["BB_Upper_16_2"] \
-        and df["SMA4_Slope"] > 45:
+        and self.high.iloc[idx-1] != df["Iday_High"] \
+        and df["SMA4_Slope_SMA"] > 0:
             bullish_trend_continuation = True
-        # Positive Turn
-        if df["High"] < self.high.iloc[idx-1] \
-        and df["Low"] < self.low.iloc[idx-1] \
-        and df["Close"] > self.close.iloc[idx-1] \
-        and df["SMA4_Slope"] > 45:
-            bullish_trend_continuation = True    
+        # Bullish SMA Pullback
+        if df["SMA32_Slope"] > 0 \
+        and df["SMA16_Slope"] > 0 \
+        and df["Close"] < df["BB_Upper_16_2"]:
+            if self.current_bar(df) == -1:
+                if df["Open"] > df["SMA16"] \
+                and df["Close"] > df["SMA16"] \
+                and df["Low"] < df["SMA16"]:
+                    bullish_trend_continuation = True
+                if df["Open"] > df["SMA32"] \
+                and df["Close"] > df["SMA32"] \
+                and df["Low"] < df["SMA32"]:
+                    bullish_trend_continuation = True
+            if self.current_bar(df) == 1:
+                if df["Open"] < df["SMA16"] \
+                and df["Close"] > df["SMA16"] \
+                and df["Close_Pct_High"] < 0.34:
+                    bullish_trend_continuation == True
+                if df["Open"] < df["SMA32"] \
+                and df["Close"] > df["SMA32"] \
+                and df["Close_Pct_High"] < 0.34:
+                    bullish_trend_continuation == True
         
         # Downtrend or Consolidation
-        # Failed Hammer
-        if hammer.iloc[idx-1] is True \
-        and df["Low"] < self.low.iloc[idx-1] \
-        and df["Close_Pct_High"] > 0.66:
+        # # Failed Hammer
+        if bull_pinbar.iloc[idx-1] is True \
+        and (self.high.iloc[idx-1] - df["Close"]) / \
+        self.range.iloc[idx-1] > 0.75 \
+        and df["Close_Pct_High"] > 0.66 \
+        and df["Close"] > df["BB_Lower_16_2"]:
             bearish_trend_continuation = True
-        # Inside Bar
+        # # Inside Bar
         if self.range.iloc[idx-1] > df["Range"] \
-        and self.close.iloc[idx-1] < self.close.iloc[idx-2] \
         and df["Close"] > self.low.iloc[idx-1] \
         and df["High"] < self.high.iloc[idx-1] \
         and df["Low"] > self.low.iloc[idx-1] \
         and df["Close"] > df["BB_Lower_16_2"] \
-        and df["Open"] > df["BB_Lower_16_2"] \
-        and df["SMA4_Slope"] < -45:
+        and self.low.iloc[idx-1] != df["Iday_Low"] \
+        and df["SMA4_Slope_SMA"] < 0:
             bearish_trend_continuation = True
-        # Negative Turn
-        if df["High"] > self.high.iloc[idx-1] \
-        and df["Low"] > self.low.iloc[idx-1] \
-        and df["Close"] < self.close.iloc[idx-1] \
-        and df["SMA4_Slope"] < -45:
-            bearish_trend_continuation = True
+        # Bearish SMA Pullback
+        if df["SMA32_Slope"] < 0 \
+        and df["SMA16_Slope"] < 0 \
+        and df["Close"] > df["BB_Lower_16_2"]:
+            if self.current_bar(df) == 1:
+                if df["Open"] < df["SMA16"] \
+                and df["Close"] < df["SMA16"] \
+                and df["High"] > df["SMA16"]:
+                    bearish_trend_continuation = True
+                if df["Open"] < df["SMA32"] \
+                and df["Close"] < df["SMA32"] \
+                and df["High"] > df["SMA32"]:
+                    bearish_trend_continuation = True
+            if self.current_bar(df) == -1:
+                if df["Open"] > df["SMA16"] \
+                and df["Close"] < df["SMA16"] \
+                and df["Close_Pct_High"] > 0.66:
+                    bearish_trend_continuation = True
+                if df["Open"] > df["SMA32"] \
+                and df["Close"] < df["SMA32"] \
+                and df["Close_Pct_High"] > 0.66:
+                    bearish_trend_continuation = True
+
         # return data
         return bullish_trend_continuation, bearish_trend_continuation
 
@@ -1063,7 +1142,8 @@ class Pattern():
             # low condition
             low_condition = None 
             if df["Close"] > self.high.iloc[idx-1] \
-            and df["Close"] < df["BB_Upper_16_2"]:
+            and (df["Close"] - df["BB_Upper_16_2"]) / \
+            df["ATR4"] < 0.33:
                 low_condition = True
                 
             # sharp momentum along the SMA4 Slope
@@ -1087,7 +1167,8 @@ class Pattern():
             # high condition
             low_condition = None 
             if df["Close"] < self.low.iloc[idx-1] \
-            and df["Close"] > df["BB_Lower_16_2"]:
+            and (df["BB_Lower_16_2"] - df["Close"]) / \
+            df["ATR4"] < 0.33:
                 low_condition = True
             
             # sharp momentum along the SMA4 Slope
@@ -1184,3 +1265,177 @@ class Pattern():
             signal = s_r.iloc[idx-1]
             entry = s_r_level.iloc[idx-1]
         return signal, entry
+
+    def bar_range_strength(
+            self, 
+            df: Series,
+            sma4_slope: Series,
+            sma_slope_up_limit: int = 10,
+            sma_slope_down_limit: int = -10
+        ):
+        """Return a numerical value indicating 
+        the strength of directionless or rangebound movemeent
+        
+        Weights:
+        - 3 = Wicks > Body
+        - 2 = Close between 55% and 45% from candle high
+        - 2 = Overlapping / non-trend bars
+        - 2 = SMA_Slope between -10 and 10
+        - 1 = Price Close through 50% of DHigh
+        - 1 = Iday_Range within Yday_Range (inside bar on daily)
+        - 1 = SMA_Trend consolidation (SMA4 between SMA16 and SMA32)
+        - 1 = Bar against the trend
+        - 1 = SMA4 change between positive/negative
+        """
+        idx = int(df["Idx"])
+        strength = 0
+        # wick greater than body
+        if df["Body"] < df["Range"] * 0.5:
+            strength +=3
+        # close between 45% - 55% from high
+        if df["Close_Pct_High"] > 0.45 and df["Close_Pct_High"] < 0.55:
+            strength +=2
+        # overlapping / non-trend bars
+        if self.current_bar(df) == 1: # current bar up
+            # prev_bar down
+            if self.close.iloc[idx-1] < self.open.iloc[idx-1]:
+                if df["High"] > self.open.iloc[idx-1]:
+                    strength +=2
+                if (self.open.iloc[idx-1] - df["Close"]) / \
+                    self.body.iloc[idx-1] < 0.50:
+                    strength +=2
+            # prev_bar up
+            if self.close.iloc[idx-1] > self.open.iloc[idx-1]:
+                if df["Close"] < self.high.iloc[idx-1]:
+                    strength +=1
+                if df["Low"] < self.low.iloc[idx-1]:
+                    strength +=1
+        if self.current_bar(df) == -1: # current bar down
+            # prev_bar up
+            if self.close.iloc[idx-1] > self.open.iloc[idx-1]:
+                if df["Low"] < self.open.iloc[idx-1]:
+                    strength +=2
+                if (df["Close"] - self.open.iloc[idx-1]) / \
+                self.body.iloc[idx-1] < 0.50:
+                    strength +=2
+            # prev_bar down
+            if self.close.iloc[idx-1] < self.open.iloc[idx-1]:
+                if df["Close"] > self.low.iloc[idx-1]:
+                    strength +=1
+                if df["High"] > self.high.iloc[idx-1]:
+                    strength +=1
+        # sma slope horizontal
+        if df["SMA16_Slope"] < sma_slope_up_limit \
+        and df["SMA16_Slope"] > sma_slope_down_limit:
+            strength +=2
+        # close through 50% DHigh
+        if df["Open_Pct_DHigh"] < 0.50 and df["Close_Pct_DHigh"] > 0.50:
+            strength +=1
+        if df["Open_Pct_DHigh"] > 0.50 and df["Close_Pct_DHigh"] < 0.50:
+            strength +=1
+        # Iday_Range within Yesterday's Range
+        if df["Iday_High"] < df["Yday_High"] \
+        and df["Iday_Low"] > df["Yday_Low"]:
+            strength +=1
+        # SMA Consolidation
+        if df["SMA_Trend"] == 0:
+            strength +=1
+        # Bar close opposite to trend
+        if df["SMA16"] > df["SMA32"] \
+        and df["Close"] < self.close.iloc[idx-1]:
+            strength +=1
+        if df["SMA16"] < df["SMA32"] \
+        and df["Close"] > self.close.iloc[idx-1]:
+            strength +=1
+        # SMA4 change between positive/negative
+        if sma4_slope.iloc[idx-1] < 0 \
+        and df["SMA4_Slope"] > 0:
+            strength +=1
+        if sma4_slope.iloc[idx-1] > 0 \
+        and df["SMA4_Slope"] < 0:
+            strength +=1
+
+        # return data
+        return strength
+    
+    def oob_pct_atr(self, df: Series):
+        """Return the percentage of ATR4 
+        price closed outside the bollinger band"""
+        pass 
+
+    def extreme_momentum(
+            self,
+            df:Series,
+            bbu: Series,
+            bbl: Series,
+            hcloses: Series,
+            lcloses: Series,
+            sma4_slope: Series,
+            sma_trend: Series,
+            atr4: Series,
+            period: int = 4
+            ):
+        """Return whether there is extreme price momentum"""
+        idx = int(df["Idx"])
+        start = idx-period+1
+        end = idx+1
+        last_x_closes = self.close.iloc[start:end]
+        last_x_hcloses = hcloses.iloc[start:end]
+        last_x_lcloses = lcloses.iloc[start:end]
+        last_x_bbu = bbu.iloc[start:end]
+        last_x_bbl = bbl.iloc[start:end]
+        last_x_sma4_slope = sma4_slope.iloc[start:end]
+        last_x_sma_trend = sma_trend.iloc[start:end]
+        last_x_atr4 = atr4.iloc[start:end]
+
+        bullish_extreme_momentum = False 
+        bearish_extreme_momentum = False
+        bullish_condition = 0
+        bearish_condition = 0 
+
+        # check last period bars meet condition
+        atr = 0
+        for i in range(len(last_x_closes)):
+            # bullish
+            if last_x_sma4_slope.iloc[i] > 45:
+                if last_x_closes.iloc[i] > last_x_bbu.iloc[i] \
+                and last_x_closes.iloc[i] == last_x_hcloses.iloc[i] \
+                and last_x_atr4.iloc[i] > atr \
+                and last_x_sma_trend.iloc[i] == 2:
+                    bullish_condition += 1
+                else:
+                    bullish_condition = 0
+                    break
+            else:
+                bullish_condition = 0
+            # bearish
+            if last_x_sma4_slope.iloc[i] < -45:
+                if last_x_closes.iloc[i] < last_x_bbl.iloc[i] \
+                and last_x_closes.iloc[i] == last_x_lcloses.iloc[i] \
+                and last_x_atr4.iloc[i] > atr \
+                and last_x_sma_trend.iloc[i] == -2:
+                    bearish_condition += 1
+                else:
+                    bearish_condition = 0
+                    break
+            atr = last_x_atr4.iloc[i]
+
+        # Avoid extreme std deviation out of bollinger band
+        if bullish_condition == len(last_x_closes) \
+        and (df["Close"] - df["BB_Upper_16_2"]) / \
+        df["ATR4"] < 0.66:
+            bullish_extreme_momentum = True
+        else:
+            bullish_extreme_momentum = False
+
+        if bearish_condition == len(last_x_closes) \
+        and (df["BB_Lower_16_2"] - df["Close"]) / \
+        df["ATR4"] < 0.66:
+            bearish_extreme_momentum = True
+        else:
+            bearish_extreme_momentum = False
+
+        # return tuple
+        return bullish_extreme_momentum, bearish_extreme_momentum
+
+

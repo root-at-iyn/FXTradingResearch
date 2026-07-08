@@ -26,6 +26,8 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     intraday = Intraday()
     data["Iday_Idx"] = data.apply(intraday.index, axis=1, args=[data.index])
     data["Iday_High"] = data.apply(intraday.high, axis=1)
+    data["Iday_HClose"] = data.apply(intraday.highest_close, axis=1)
+    data["Iday_LClose"] = data.apply(intraday.lowest_close, axis=1)
     data["Iday_Low"] = data.apply(intraday.low, axis=1)
     data["Iday_Range"] = data.apply(intraday.range, axis=1)
     data["Close_Pct_DHigh"] = data.apply(intraday.close_pct_iday_high, axis=1)
@@ -122,7 +124,9 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         )
     # Candlestick Patterns
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
+    data["Bull_Pinbar"] = data.apply(pattern.bullish_pinbar, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
+    data["Bear_Pinbar"] = data.apply(pattern.bearish_pinbar, axis=1)
     data["Bull_Engulf"] = data.apply(pattern.bullish_engulfing, axis=1)
     data["Bear_Engulf"] = data.apply(pattern.bearish_engulfing, axis=1)
     data["Dark_Cloud"] = data.apply(pattern.dark_cloud_cover, axis=1)
@@ -183,7 +187,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
         axis=1,
-        args=[data["Hammer"], data["Shooting_Star"]],
+        args=[data["Bull_Pinbar"], data["Bear_Pinbar"]],
         result_type='expand'
         )
     data[["Bull_TC_Candle", "Bear_TC_Candle"]] = data.apply(
@@ -213,6 +217,24 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         result_type='expand'
     )
 
+    # Range Strength
+    data["BRS"] = data.apply(
+        pattern.bar_range_strength, 
+        axis=1, 
+        args=[data["SMA4_Slope"]]
+        )
+    data["RS_SMA"] = data["BRS"].rolling(4).mean()
+
+    # Extreme Momentum
+    data[["Bull_XM", "Bear_XM"]] = data.apply(
+        pattern.extreme_momentum,
+        axis=1,
+        args=[data["BB_Upper_16_2"], data["BB_Lower_16_2"], 
+              data["Iday_HClose"], data["Iday_LClose"],
+              data["SMA4_Slope"], data["SMA_Trend"],data["ATR4"]],
+        result_type='expand'
+    )
+
     # Return all features
     return data
 
@@ -221,7 +243,7 @@ if __name__ == '__main__':
     #get data
     PATH = "./output"
     OUT_PATH = "./research/price_data"
-    SYMBOL = "USDCAD"
+    SYMBOL = "GBPUSD"
     FILE = f"{SYMBOL}_15mins_1yr_End_20260311.csv"
     df = pd.read_csv(f"{PATH}/{FILE}")
     #clean IBKR data

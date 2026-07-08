@@ -64,8 +64,8 @@ def getEarliestDataTimestamp(app: IBClient, contract: Contract):
 if __name__ == '__main__':
 
     PATH = "./output"
-    BASE = "NZD"
-    QUOTE = "USD"
+    BASE = "GBP"
+    QUOTE = "AUD"
     SYMBOL = BASE + QUOTE
     YEAR = "2026"
     FILE = f"{SYMBOL}_15mins_1yr_End_{YEAR}0311.csv"
