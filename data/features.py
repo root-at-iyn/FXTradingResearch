@@ -941,6 +941,8 @@ class Pattern():
         """
         bullish_trend_continuation = False
         bearish_trend_continuation = False
+        up_slope = 11.25
+        down_slope = -11.25
         idx = int(df["Idx"])
         # Uptrend or Consolidation
         # Failed Shooting_Star
@@ -960,30 +962,32 @@ class Pattern():
         and df["SMA4_Slope_SMA"] > 0:
             bullish_trend_continuation = True
         # Bullish SMA Pullback
-        if df["SMA32_Slope"] > 0 \
-        and df["SMA16_Slope"] > 0 \
-        and df["Close"] < df["BB_Upper_16_2"]:
+        if df["Close"] < df["BB_Upper_16_2"]:
             if self.current_bar(df) == -1:
                 if df["Open"] > df["SMA16"] \
                 and df["Close"] > df["SMA16"] \
-                and df["Low"] < df["SMA16"]:
+                and df["Low"] < df["SMA16"] \
+                and df["SMA16_Slope"] > up_slope:
                     bullish_trend_continuation = True
                 if df["Open"] > df["SMA32"] \
                 and df["Close"] > df["SMA32"] \
-                and df["Low"] < df["SMA32"]:
+                and df["Low"] < df["SMA32"] \
+                and df["SMA32_Slope"] > up_slope:
                     bullish_trend_continuation = True
             if self.current_bar(df) == 1:
                 if df["Open"] < df["SMA16"] \
                 and df["Close"] > df["SMA16"] \
-                and df["Close_Pct_High"] < 0.34:
-                    bullish_trend_continuation == True
+                and df["Close_Pct_High"] < 0.34 \
+                and df["SMA16_Slope"] > up_slope:
+                    bullish_trend_continuation = True
                 if df["Open"] < df["SMA32"] \
                 and df["Close"] > df["SMA32"] \
-                and df["Close_Pct_High"] < 0.34:
-                    bullish_trend_continuation == True
+                and df["Close_Pct_High"] < 0.34 \
+                and df["SMA32_Slope"] > up_slope:
+                    bullish_trend_continuation = True
         
         # Downtrend or Consolidation
-        # # Failed Hammer
+        # Failed Hammer
         if bull_pinbar.iloc[idx-1] is True \
         and (self.high.iloc[idx-1] - df["Close"]) / \
         self.range.iloc[idx-1] > 0.75 \
@@ -1000,26 +1004,28 @@ class Pattern():
         and df["SMA4_Slope_SMA"] < 0:
             bearish_trend_continuation = True
         # Bearish SMA Pullback
-        if df["SMA32_Slope"] < 0 \
-        and df["SMA16_Slope"] < 0 \
-        and df["Close"] > df["BB_Lower_16_2"]:
+        if df["Close"] > df["BB_Lower_16_2"]:
             if self.current_bar(df) == 1:
                 if df["Open"] < df["SMA16"] \
                 and df["Close"] < df["SMA16"] \
-                and df["High"] > df["SMA16"]:
+                and df["High"] > df["SMA16"] \
+                and df["SMA16_Slope"] < down_slope:
                     bearish_trend_continuation = True
                 if df["Open"] < df["SMA32"] \
                 and df["Close"] < df["SMA32"] \
-                and df["High"] > df["SMA32"]:
+                and df["High"] > df["SMA32"] \
+                and df["SMA32_Slope"] < down_slope:
                     bearish_trend_continuation = True
             if self.current_bar(df) == -1:
                 if df["Open"] > df["SMA16"] \
                 and df["Close"] < df["SMA16"] \
-                and df["Close_Pct_High"] > 0.66:
+                and df["Close_Pct_High"] > 0.66 \
+                and df["SMA16_Slope"] < down_slope:
                     bearish_trend_continuation = True
                 if df["Open"] > df["SMA32"] \
                 and df["Close"] < df["SMA32"] \
-                and df["Close_Pct_High"] > 0.66:
+                and df["Close_Pct_High"] > 0.66 \
+                and df["SMA32_Slope"] < down_slope:
                     bearish_trend_continuation = True
 
         # return data

@@ -119,7 +119,9 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     
     # Candlestick Patterns
     data["Hammer"] = data.apply(pattern.hammer, axis=1)
+    data["Bull_Pinbar"] = data.apply(pattern.bullish_pinbar, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
+    data["Bear_Pinbar"] = data.apply(pattern.bearish_pinbar, axis=1)
     # Bullish Trend Momentum
     data["Bull_TM"] = data.apply(
         pattern.bullish_trend_momentum, axis=1
@@ -131,7 +133,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
         axis=1,
-        args=[data["Hammer"], data["Shooting_Star"]],
+        args=[data["Bull_Pinbar"], data["Bear_Pinbar"]],
         result_type='expand'
         )
     
@@ -167,23 +169,6 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_BBR_C4"] = data.apply(pattern.bullish_bb_reversal_c4, axis=1)
     data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
 
-    # Range Strength
-    data["BRS"] = data.apply(
-        pattern.bar_range_strength, 
-        axis=1, 
-        args=[data["SMA4_Slope"]]
-        )
-    data["RS_SMA"] = data["BRS"].rolling(4).mean()
-
-    # Extreme Momentum
-    data[["Bull_XM", "Bear_XM"]] = data.apply(
-        pattern.extreme_momentum,
-        axis=1,
-        args=[data["BB_Upper_16_2"], data["BB_Lower_16_2"], 
-              data["Iday_HClose"], data["Iday_LClose"],
-              data["SMA4_Slope"], data["SMA_Trend"],data["ATR4"]],
-        result_type='expand'
-    )
 
     # return data
     return data
