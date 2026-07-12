@@ -957,9 +957,8 @@ class Pattern():
         and df["Close"] < self.high.iloc[idx-1] \
         and df["High"] < self.high.iloc[idx-1] \
         and df["Low"] > self.low.iloc[idx-1] \
-        and df["Close"] < df["BB_Upper_16_2"] \
-        and self.high.iloc[idx-1] != df["Iday_High"] \
-        and df["SMA4_Slope_SMA"] > 0:
+        and df["Close"] > self.low.iloc[idx-1] \
+        and df["SMA16_Slope_SMA"] > 0:
             bullish_trend_continuation = True
         # Bullish SMA Pullback
         if df["Close"] < df["BB_Upper_16_2"]:
@@ -999,9 +998,8 @@ class Pattern():
         and df["Close"] > self.low.iloc[idx-1] \
         and df["High"] < self.high.iloc[idx-1] \
         and df["Low"] > self.low.iloc[idx-1] \
-        and df["Close"] > df["BB_Lower_16_2"] \
-        and self.low.iloc[idx-1] != df["Iday_Low"] \
-        and df["SMA4_Slope_SMA"] < 0:
+        and df["Close"] < self.high.iloc[idx-1] \
+        and df["SMA16_Slope_SMA"] < 0:
             bearish_trend_continuation = True
         # Bearish SMA Pullback
         if df["Close"] > df["BB_Lower_16_2"]:
@@ -1275,99 +1273,25 @@ class Pattern():
     def bar_range_strength(
             self, 
             df: Series,
-            sma4_slope: Series,
-            sma_slope_up_limit: int = 10,
-            sma_slope_down_limit: int = -10
         ):
         """Return a numerical value indicating 
         the strength of directionless or rangebound movemeent
-        
-        Weights:
-        - 3 = Wicks > Body
-        - 2 = Close between 55% and 45% from candle high
-        - 2 = Overlapping / non-trend bars
-        - 2 = SMA_Slope between -10 and 10
-        - 1 = Price Close through 50% of DHigh
-        - 1 = Iday_Range within Yday_Range (inside bar on daily)
-        - 1 = SMA_Trend consolidation (SMA4 between SMA16 and SMA32)
-        - 1 = Bar against the trend
-        - 1 = SMA4 change between positive/negative
         """
         idx = int(df["Idx"])
         strength = 0
-        # wick greater than body
-        if df["Body"] < df["Range"] * 0.5:
-            strength +=3
-        # close between 45% - 55% from high
-        if df["Close_Pct_High"] > 0.45 and df["Close_Pct_High"] < 0.55:
-            strength +=2
         # overlapping / non-trend bars
         if self.current_bar(df) == 1: # current bar up
-            # prev_bar down
-            if self.close.iloc[idx-1] < self.open.iloc[idx-1]:
-                if df["High"] > self.open.iloc[idx-1]:
-                    strength +=2
-                if (self.open.iloc[idx-1] - df["Close"]) / \
-                    self.body.iloc[idx-1] < 0.50:
-                    strength +=2
+            strength = (self.high.iloc[idx-1] - df["Low"]) \
+                / self.range.iloc[idx-1]
+        elif self.current_bar(df) == -1: # current bar down
             # prev_bar up
-            if self.close.iloc[idx-1] > self.open.iloc[idx-1]:
-                if df["Close"] < self.high.iloc[idx-1]:
-                    strength +=1
-                if df["Low"] < self.low.iloc[idx-1]:
-                    strength +=1
-        if self.current_bar(df) == -1: # current bar down
-            # prev_bar up
-            if self.close.iloc[idx-1] > self.open.iloc[idx-1]:
-                if df["Low"] < self.open.iloc[idx-1]:
-                    strength +=2
-                if (df["Close"] - self.open.iloc[idx-1]) / \
-                self.body.iloc[idx-1] < 0.50:
-                    strength +=2
-            # prev_bar down
-            if self.close.iloc[idx-1] < self.open.iloc[idx-1]:
-                if df["Close"] > self.low.iloc[idx-1]:
-                    strength +=1
-                if df["High"] > self.high.iloc[idx-1]:
-                    strength +=1
-        # sma slope horizontal
-        if df["SMA16_Slope"] < sma_slope_up_limit \
-        and df["SMA16_Slope"] > sma_slope_down_limit:
-            strength +=2
-        # close through 50% DHigh
-        if df["Open_Pct_DHigh"] < 0.50 and df["Close_Pct_DHigh"] > 0.50:
-            strength +=1
-        if df["Open_Pct_DHigh"] > 0.50 and df["Close_Pct_DHigh"] < 0.50:
-            strength +=1
-        # Iday_Range within Yesterday's Range
-        if df["Iday_High"] < df["Yday_High"] \
-        and df["Iday_Low"] > df["Yday_Low"]:
-            strength +=1
-        # SMA Consolidation
-        if df["SMA_Trend"] == 0:
-            strength +=1
-        # Bar close opposite to trend
-        if df["SMA16"] > df["SMA32"] \
-        and df["Close"] < self.close.iloc[idx-1]:
-            strength +=1
-        if df["SMA16"] < df["SMA32"] \
-        and df["Close"] > self.close.iloc[idx-1]:
-            strength +=1
-        # SMA4 change between positive/negative
-        if sma4_slope.iloc[idx-1] < 0 \
-        and df["SMA4_Slope"] > 0:
-            strength +=1
-        if sma4_slope.iloc[idx-1] > 0 \
-        and df["SMA4_Slope"] < 0:
-            strength +=1
-
+            strength = (df["High"] - self.low.iloc[idx-1]) \
+            / self.range.iloc[idx-1]
+        else:
+            strength = 1
         # return data
         return strength
     
-    def oob_pct_atr(self, df: Series):
-        """Return the percentage of ATR4 
-        price closed outside the bollinger band"""
-        pass 
 
     def extreme_momentum(
             self,

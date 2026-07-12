@@ -87,6 +87,8 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         )
     data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[4, data["SMA4_Slope"]])
+    data["SMA16_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[16, data["SMA4_Slope"]])
     data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[32, data["SMA4_Slope"]])
     # Significant Levels
@@ -169,6 +171,12 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_BBR_C4"] = data.apply(pattern.bullish_bb_reversal_c4, axis=1)
     data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
 
+    # Range Strength
+    data["BRS"] = data.apply(
+        pattern.bar_range_strength, 
+        axis=1
+        )
+    data["RS_SMA"] = data["BRS"].rolling(4).mean()
 
     # return data
     return data

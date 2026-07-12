@@ -80,7 +80,7 @@ if __name__ == '__main__':
     cols = ["Entry", "SMA4_Slope", 
             "Bull_TM", "Bear_TM", "ATR4", "Range",
             "Bull_BBR_V2", "Bear_BBR_V2", "Bull_TC", "Bear_TC",
-            "SMA4_Slope_SMA", "SMA16_Slope", "SMA32_Slope"]
+            "BRS", "RS_SMA"]
     trade_entry = ["Symbol", "Bull_TM", "Bear_TM","Bull_BBR_V2", "Bear_BBR_V2","Bull_TC", "Bear_TC", 
                    "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range"]
     print(data[cols].tail(100),"\n")

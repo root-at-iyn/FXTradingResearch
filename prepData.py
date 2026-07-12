@@ -220,8 +220,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     # Range Strength
     data["BRS"] = data.apply(
         pattern.bar_range_strength, 
-        axis=1, 
-        args=[data["SMA4_Slope"]]
+        axis=1
         )
     data["RS_SMA"] = data["BRS"].rolling(4).mean()
 
