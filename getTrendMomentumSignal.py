@@ -15,7 +15,7 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
         "MIDPOINT",
         0, # get data out of RTH
         2, # Epoch timestamp
-        True,
+        False,
         []
     )
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     #get data
     base = "GBP"
     quote = "USD"
-    tp = 1.25 # 1 for TM / 2 for BBR
+    tp = 1.5 # 1 for TM / 2 for BBR
     sl = 1
     df = getRecentHistoricalData(base, quote)
     #clean IBKR data
@@ -79,9 +79,9 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 100
     cols = ["Entry", "SMA4_Slope", 
             "Bull_TM", "Bear_TM", "ATR4", "Range",
-            "Bull_BBR_V2", "Bear_BBR_V2", "Bull_TC", "Bear_TC",
-            "BRS", "RS_SMA"]
-    trade_entry = ["Symbol", "Bull_TM", "Bear_TM","Bull_BBR_V2", "Bear_BBR_V2","Bull_TC", "Bear_TC", 
+            "Bull_TC", "Bear_TC","Bull_IB", "Bear_IB",
+            "SMA4_Slope_SMA", "SMA16_Slope_SMA", "SMA32_Slope_SMA"]
+    trade_entry = ["Symbol", "Bull_TM", "Bear_TM","Bull_TC", "Bear_TC","Bull_IB", "Bear_IB", 
                    "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range"]
     print(data[cols].tail(100),"\n")
     data.to_csv(f"./research/price_data/FE_latest.csv")

@@ -44,6 +44,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     # Average True Range
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])
     data["ATR4"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],4])
+    data["ATR16"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],16])
     # Simple Moving Averages
     data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
     data["SMA8"] = data.apply(indicator.SMA, axis=1, args=[8, data["Close"]])
@@ -187,11 +188,16 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
         axis=1,
+        result_type='expand'
+        )
+    data[["Bull_PB_Fail", "Bear_PB_Fail"]] = data.apply(
+        pattern.pinbar_fail, 
+        axis=1,
         args=[data["Bull_Pinbar"], data["Bear_Pinbar"]],
         result_type='expand'
         )
-    data[["Bull_TC_Candle", "Bear_TC_Candle"]] = data.apply(
-        pattern.trend_candle, 
+    data[["Bull_IB", "Bear_IB"]] = data.apply(
+        pattern.inside_bar, 
         axis=1,
         result_type='expand'
         )
@@ -228,9 +234,13 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data[["Bull_XM", "Bear_XM"]] = data.apply(
         pattern.extreme_momentum,
         axis=1,
-        args=[data["BB_Upper_16_2"], data["BB_Lower_16_2"], 
-              data["Iday_HClose"], data["Iday_LClose"],
-              data["SMA4_Slope"], data["SMA_Trend"],data["ATR4"]],
+        args=[data["SMA4_Slope"], data["SMA4"], data["ATR4"]],
+        result_type='expand',
+        period = 4
+    )
+    data[["Bull_XM_V2", "Bear_XM_V2"]] = data.apply(
+        pattern.extreme_momentum_v2,
+        axis=1,
         result_type='expand'
     )
 
