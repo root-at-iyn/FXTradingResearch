@@ -40,6 +40,8 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
     data["Yday_Range"] = data.apply(indicator.yesterday_range, axis=1)
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
+    data["Yday_Open"] = data.apply(indicator.yesterday_open, axis=1, args=[data["Open"]])
+    data["Yday_Close"] = data.apply(indicator.yesterday_close, axis=1, args=[data["Close"]])
     data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
     # Average True Range
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])
@@ -50,6 +52,8 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data["SMA8"] = data.apply(indicator.SMA, axis=1, args=[8, data["Close"]])
     data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16, data["Close"]])
     data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32, data["Close"]])
+    data["SMA96"] = data.apply(indicator.SMA, axis=1, args=[96, data["Close"]])
+    data["SMA192"] = data.apply(indicator.SMA, axis=1, args=[200, data["Close"]])
     # Bollinger Bands
     data["BB_Upper_16_2"] = data.apply(
         indicator.bollinger_band_upper, 
@@ -86,6 +90,16 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         axis=1, 
         args=[data["Iday_Low"], data["Day_Idx"]]
         )
+    data["Sig_HClose"] = data.apply(
+        indicator.significant_hclose,
+        axis=1,
+        args=[data["Iday_HClose"],data["Day_Idx"]]        
+    )
+    data["Sig_LClose"] = data.apply(
+        indicator.significant_lclose,
+        axis=1,
+        args=[data["Iday_LClose"],data["Day_Idx"]]        
+    )
     # SMA Trend
     data["SMA_Trend"] = data.apply(
         indicator.sma_trend, 
@@ -133,8 +147,14 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data["Dark_Cloud"] = data.apply(pattern.dark_cloud_cover, axis=1)
     data["Piercing"] = data.apply(pattern.piercing, axis=1)
     # Intraday Range Reversals
-    data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
-    data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
+    data["ILR"] = data.apply(
+        pattern.intraday_low_reversal, 
+        axis=1
+        )
+    data["IHR"] = data.apply(
+        pattern.intraday_high_reversal, 
+        axis=1
+        )
     # Support / Resistance
     data[["S_R", "S_R_Level"]] = data.apply(
         pattern.support_resistance, 
@@ -151,19 +171,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         )
     data["Bull_SMA_BO"] = data.apply(pattern.bullish_sma_breakout, axis=1)
     data["Bear_SMA_BO"] = data.apply(pattern.bearish_sma_breakout, axis=1)
-    # Legacy Bollinger Band Reversals
-    data["Bull_BBR"] = data.apply(
-        pattern.bullish_bb_reversal, axis=1, 
-        args=[
-            data["BB_Lower_16_2"], data["ATR"]
-            ]
-        ) 
-    data["Bear_BBR"] = data.apply(
-        pattern.bearish_bb_reversal, axis=1, 
-        args=[
-            data["BB_Upper_16_2"], data["ATR"]
-            ]
-        )
+
     # Bearish Bollinger Band Reversals
     data["Bear_BBR_C1"] = data.apply(
         pattern.bearish_bb_reversal_c1,
@@ -199,6 +207,8 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data[["Bull_IB", "Bear_IB"]] = data.apply(
         pattern.inside_bar, 
         axis=1,
+        args=[data["Close_Pct_High"],
+              data["BB_Upper_16_2"], data["BB_Lower_16_2"]],
         result_type='expand'
         )
     # Momentum
@@ -223,26 +233,31 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         result_type='expand'
     )
 
-    # Range Strength
-    data["BRS"] = data.apply(
-        pattern.bar_range_strength, 
+    # Bar Overlap
+    data["Overlap"] = data.apply(
+        pattern.bar_overlap, 
         axis=1
         )
-    data["RS_SMA"] = data["BRS"].rolling(4).mean()
+    data["Overlap_SMA"] = data["Overlap"].rolling(4).mean()
 
     # Extreme Momentum
-    data[["Bull_XM", "Bear_XM"]] = data.apply(
-        pattern.extreme_momentum,
-        axis=1,
-        args=[data["SMA4_Slope"], data["SMA4"], data["ATR4"]],
-        result_type='expand',
-        period = 4
-    )
     data[["Bull_XM_V2", "Bear_XM_V2"]] = data.apply(
         pattern.extreme_momentum_v2,
         axis=1,
         result_type='expand'
     )
+
+    # Yesterday High Retest
+    data["Yday_High_RT"] = data.apply(
+        pattern.yday_high_retest,
+        args=[data["Close_Pct_High"]], 
+        axis=1
+        )
+    data["Yday_Low_RT"] = data.apply(
+        pattern.yday_low_retest,
+        args=[data["Close_Pct_High"]], 
+        axis=1
+        )
 
     # Return all features
     return data
@@ -266,12 +281,11 @@ if __name__ == '__main__':
 
     base_cols = [
         "Iday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
-        "SMA_Trend", "SMA4_Slope", "SMA4_Slope_SMA",
-        "SMA16_Slope", "SMA16_Slope_SMA", "Close_Pct_SMA"]
+        "Overlap_SMA", "IHR", "ILR"]
 
     # Print patterns
     # print(data['2025-03-11 17:15':'2025-03-12 16:45'][base_cols])
-    print(data)
+    print(data[base_cols].query("ILR.notna() or IHR.notna()").tail(30))
 
     # WRITE TO CSV
     # output feature enhanced price data to csv

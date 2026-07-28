@@ -192,6 +192,20 @@ class Indicator():
         if df["Yday_High"] is not None:
             return df["Yday_High"] - df["Yday_Low"]
     
+    def yesterday_open(self, df: Series, open_price: Series):
+        """Returns the previous day's opening price"""
+        if df["Day_Idx"] > 0:
+            idx = int(df["Idx"])
+            BOD_idx = int(idx - df["Iday_Idx"])
+            return open_price.iloc[BOD_idx-1]
+
+    def yesterday_close(self, df: Series, close_price: Series):
+        """Returns the previous day's opening price"""
+        if df["Day_Idx"] > 0:
+            idx = int(df["Idx"])
+            BOD_idx = int(idx - df["Iday_Idx"])
+            return close_price.iloc[BOD_idx-1]
+    
     def ADR(self, df: Series, period: int):
         """Returns the average daily range for `period` trading sessions"""
 
@@ -394,6 +408,40 @@ class Indicator():
         
         return self.lowest_sig_low
     
+    def significant_hclose(
+            self, 
+            df: Series, 
+            iday_hclose: Series,
+            day_idx: Series, 
+            period: int = 8
+            ):
+        """Return highest intraday close 
+        that was the highest for over `period` bars"""
+        idx = int(df["Idx"])
+        current_hclose = df["Iday_HClose"]
+        if df['Iday_Idx'] > period:
+            period_start_hclose = iday_hclose.iloc[idx-period]
+            if current_hclose == period_start_hclose \
+            and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
+                return current_hclose
+            
+    def significant_lclose(
+            self, 
+            df: Series, 
+            iday_lclose: Series,
+            day_idx: Series, 
+            period: int = 8
+            ):
+        """Return lowest intraday close 
+        that was the lowest for over `period` bars"""
+        idx = int(df["Idx"])
+        current_lclose = df["Iday_LClose"]
+        if df['Iday_Idx'] > period:
+            period_start_lclose = iday_lclose.iloc[idx-period]
+            if current_lclose == period_start_lclose \
+            and day_idx.iloc[idx - period] == day_idx.iloc[idx]:
+                return current_lclose
+    
     def ATR(self, df: Series, closes: Series, period: int = 12):
         """Return the Average True Range for the period"""
 
@@ -579,50 +627,6 @@ class Pattern():
                 and df["Body"] > df["UWick"]:
                     return True
                 
-    def bullish_bb_reversal(
-            self, 
-            df:Series, 
-            bb_lower: Series, 
-            atr: Series
-            ):
-        """
-        Returns a boolean on whether a bullish bollinger band reversal occured
-        """
-
-        idx = int(df["Idx"])
-        if idx > 0 and df["ADR"] > 0:
-            prev_open = self.open.iloc[idx-1]
-            prev_close = self.close.iloc[idx-1]
-            # base signal condition
-            if self.current_bar(df) ==1 and prev_close < prev_open \
-                and prev_close < bb_lower.iloc[idx-1] \
-                and df["Range"] > (prev_open - prev_close) * 0.50 \
-                and df["Close_Pct_High"] <= 0.5 \
-                and self.range.iloc[idx-1] > atr.iloc[idx-1]:
-                return True
-
-
-    def bearish_bb_reversal(
-            self, 
-            df:Series, 
-            bb_upper: Series,
-            atr: Series
-            ):
-        """
-        Returns a boolean on whether a bearish bollinger band reversal occured
-        """
-
-        idx = int(df["Idx"])
-        if idx > 0 and df["ADR"] > 0:
-            prev_open = self.open.iloc[idx-1]
-            prev_close = self.close.iloc[idx-1]
-            # base signal condition
-            if self.current_bar(df) ==-1 and prev_close > prev_open \
-                and prev_close > bb_upper.iloc[idx-1] \
-                and (df["Range"] > (prev_close - prev_open) * 0.50 \
-                and df["Close_Pct_High"] >= 0.50) \
-                and self.range.iloc[idx-1] > atr.iloc[idx-1]:
-                    return True
 
     def bearish_bb_reversal_c1(
             self,
@@ -988,43 +992,59 @@ class Pattern():
         """Failure of bearish pinbar"""
         # Failed Shooting_Star
         if bear_pinbar.iloc[idx-1] is True \
+        and self.current_bar(df) == 1 \
         and (df["Close"] - self.low.iloc[idx-1]) / \
         self.range.iloc[idx-1] > 0.75 \
         and df["Close_Pct_High"] < 0.34 \
-        and df["Close"] < df["BB_Upper_16_2"]:
+        and self.close.iloc[idx-1] == df["Iday_LClose"]:
             bullish_pb_fail = True
         # Failed Hammer
         if bull_pinbar.iloc[idx-1] is True \
+        and self.current_bar(df) == -1 \
         and (self.high.iloc[idx-1] - df["Close"]) / \
         self.range.iloc[idx-1] > 0.75 \
         and df["Close_Pct_High"] > 0.66 \
-        and df["Close"] > df["BB_Lower_16_2"]:
+        and self.close.iloc[idx-1] == df["Iday_HClose"]:
             bearish_pb_fail = True
         return bullish_pb_fail, bearish_pb_fail
     
-    def inside_bar(self, df):
+    def inside_bar(
+            self, 
+            df: Series, 
+            close_pct_high: Series, 
+            bbu: Series, 
+            bbl: Series
+            ):
         """Inside bar in direction of SMA16"""
         idx = int(df["Idx"])
         bullish_inside_bar = False
         bearish_inside_bar = False
-        mb_low = self.low.iloc[idx-2]
-        mb_high = self.high.iloc[idx-2]
-        inside_bars = [
-            self.open.iloc[idx-1],
-            self.close.iloc[idx-1],
-            self.open.iloc[idx],
-            self.close.iloc[idx],
-        ]
+        prev_close = self.close.iloc[idx-1]
+        prev_open = self.open.iloc[idx-1]
+        prev_high = self.high.iloc[idx-1]
+        prev_low = self.low.iloc[idx-1]
+        open_close_max = max([df["Open"],df["Close"]])
+        open_close_min = min([df["Open"],df["Close"]])
+
         # Bullish Inside Bar
-        if df["SMA16_Slope_SMA"] > 22.5 \
-        and max(inside_bars) < mb_high \
-        and min(inside_bars) > mb_low:
-            bullish_inside_bar = True
-        # # Inside Bar
-        if df["SMA16_Slope_SMA"] < -22.5 \
-        and max(inside_bars) < mb_high \
-        and min(inside_bars) > mb_low:
-            bearish_inside_bar = True
+        if prev_close < bbu.iloc[idx-1] \
+        and df["SMA32_Slope_SMA"] > 11.25 \
+        and df["SMA16_Slope_SMA"] > 22.5:
+            if prev_close < prev_open \
+            and self.current_bar(df) == 1 \
+            and df["High"] < prev_high \
+            and df["Low"] > prev_low:
+                bullish_inside_bar = True
+        # Bearish Inside Bar
+        if prev_close > bbl.iloc[idx-1] \
+        and df["SMA32_Slope_SMA"] < -11.25 \
+        and df["SMA16_Slope_SMA"] < -22.5:
+            if prev_close > prev_open \
+            and self.current_bar(df) == -1 \
+            and df["High"] < prev_high \
+            and df["Low"] > prev_low:
+                bearish_inside_bar = True
+        # return data
         return bullish_inside_bar, bearish_inside_bar
 
 
@@ -1228,7 +1248,7 @@ class Pattern():
             entry = s_r_level.iloc[idx-1]
         return signal, entry
 
-    def bar_range_strength(
+    def bar_overlap(
             self, 
             df: Series,
         ):
@@ -1236,69 +1256,19 @@ class Pattern():
         the strength of directionless or rangebound movemeent
         """
         idx = int(df["Idx"])
-        strength = 0
+        overlap = 1
+        prev_body = abs(self.open.iloc[idx-1] - self.close.iloc[idx-1])
         # overlapping / non-trend bars
-        if self.current_bar(df) == 1: # current bar up
-            strength = (self.high.iloc[idx-1] - df["Low"]) \
-                / self.range.iloc[idx-1]
-        elif self.current_bar(df) == -1: # current bar down
-            # prev_bar up
-            strength = (df["High"] - self.low.iloc[idx-1]) \
-            / self.range.iloc[idx-1]
-        else:
-            strength = 1
+        if prev_body > 0:
+            if self.current_bar(df) == 1 \
+            and self.close.iloc[idx-1] > self.open.iloc[idx-1]: 
+                overlap = df["LWick"] / prev_body
+            elif self.current_bar(df) == -1 \
+            and self.close.iloc[idx-1] < self.open.iloc[idx-1]: 
+                overlap = df["UWick"] / prev_body
         # return data
-        return strength
+        return overlap
     
-
-    def extreme_momentum(
-            self,
-            df:Series,
-            sma4_slope: Series,
-            sma4: Series,
-            atr4: Series,
-            period: int = 4
-            ):
-        """Return whether there is extreme price momentum"""
-        idx = int(df["Idx"])
-        start = idx-period+1
-        end = idx+1
-        last_x_closes = self.close.iloc[start:end]
-        last_x_sma4_slope = sma4_slope.iloc[start:end]
-        last_x_sma4 = sma4.iloc[start:end]
-
-        bullish_extreme_momentum = False 
-        bearish_extreme_momentum = False
-        bullish_condition = 0
-        bearish_condition = 0 
-
-        # check last period bars meet condition
-        for i in range(len(last_x_closes)):
-            # bullish
-            if last_x_sma4_slope.iloc[i] > 45:
-                bullish_condition += 1
-            else:
-                bullish_condition = 0
-
-            # bearish
-            if last_x_sma4_slope.iloc[i] < -45:
-                bearish_condition += 1
-            else:
-                bearish_condition = 0
-        
-        if bullish_condition >= period \
-            and df["High"] < self.high.iloc[idx-1] \
-            and df["Low"] < self.low.iloc[idx-1]:
-            bullish_extreme_momentum = True
-        if bearish_condition >= period \
-            and df["High"] > self.high.iloc[idx-1] \
-            and df["Low"] > self.low.iloc[idx-1]:
-            bearish_extreme_momentum = True
-
-        # return tuple
-        return bullish_extreme_momentum, bearish_extreme_momentum
-
-
     def extreme_momentum_v2(
             self,
             df:Series
@@ -1306,23 +1276,60 @@ class Pattern():
         """Return whether there is extreme price momentum"""
         idx = int(df["Idx"])
         BOD_idx = idx - df["Iday_Idx"] # beginning of day
+        yday_close = self.close.iloc[BOD_idx-1]
 
         bullish_extreme_momentum_v2 = False 
         bearish_extreme_momentum_v2 = False 
+        bbu_gap = (df["Close"] - df["BB_Upper_16_2"])
+        bbl_gap = (df["BB_Lower_16_2"] - df["Close"])
         
-        if df["SMA4_Slope"] > 45 \
-            and df["Close"] > df["Yday_High"]:
-                if df["Low"] < df["SMA4"] \
-                and df["Close"] > df["SMA4"] \
-                and (df["Close"] - df["BB_Upper_16_2"]) / \
-                df["ATR4"] < 0.33:
+        # BullishMomemntum
+        if df["Close"] > df["Yday_High"] \
+        and df["SMA4_Slope"] > 45:
+            if df["Low"] < df["SMA4"] \
+            and df["Close"] > df["SMA4"] \
+            and df["Range"] < self.range.iloc[idx-1] * 2:
+                if bbu_gap > 0:
+                    if bbl_gap / df["ATR4"] < 0.33:
+                        bullish_extreme_momentum_v2 = True
+                else:
                     bullish_extreme_momentum_v2 = True
-        if df["SMA4_Slope"] < -45 \
-            and df["Close"] < df["Yday_Low"]:
-                if df["High"] > df["SMA4"] \
-                and df["Close"] < df["SMA4"] \
-                and (df["BB_Lower_16_2"] - df["Close"]) / \
-                df["ATR4"] < 0.33:
+        # BearishMomentum
+        if df["Close"] < df["Yday_Low"] \
+        and df["SMA4_Slope"] < -45:
+            if df["High"] > df["SMA4"] \
+            and df["Close"] < df["SMA4"] \
+            and df["Range"] < self.range.iloc[idx-1] * 2:
+                if bbl_gap > 0:
+                    if bbl_gap / df["ATR4"] < 0.33:
+                        bearish_extreme_momentum_v2 = True
+                else:
                     bearish_extreme_momentum_v2 = True
         # return tuple
         return bullish_extreme_momentum_v2, bearish_extreme_momentum_v2
+
+    def yday_high_retest(self, df: Series, close_pct_high: Series):
+        """Returns if price retested Yesterday's High after breaking above it"""
+        idx = int(df["Idx"])
+        if self.open.iloc[idx-1] < df["Yday_High"] \
+        and self.close.iloc[idx-1] > df["Yday_High"] \
+        and close_pct_high.iloc[idx-1] < 0.34 \
+        and df["Open"] > df["Yday_High"] \
+        and df["Low"] < df["Yday_High"] \
+        and df["Close"] > df["Yday_High"] \
+        and df["SMA16_Slope"] > 11.25 \
+        and df["SMA32_Slope"] > 11.25:
+            return True
+        
+    def yday_low_retest(self, df: Series, close_pct_high: Series):
+        """Returns if price retested Yesterday's Low after breaking below it"""
+        idx = int(df["Idx"])
+        if self.open.iloc[idx-1] > df["Yday_Low"] \
+        and self.close.iloc[idx-1] < df["Yday_Low"] \
+        and close_pct_high.iloc[idx-1] > 0.66 \
+        and df["Open"] < df["Yday_Low"] \
+        and df["High"] > df["Yday_Low"] \
+        and df["Close"] < df["Yday_Low"] \
+        and df["SMA16_Slope"] < -11.25 \
+        and df["SMA32_Slope"] < -11.25:
+            return True

@@ -141,6 +141,8 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data[["Bull_IB", "Bear_IB"]] = data.apply(
         pattern.inside_bar, 
         axis=1,
+        args=[data["Close_Pct_High"],data["BB_Upper_16_2"], 
+              data["BB_Lower_16_2"]],
         result_type='expand'
         )
     
@@ -177,12 +179,21 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
 
     # Extreme Momentum
-    data[["Bull_XM", "Bear_XM"]] = data.apply(
-        pattern.extreme_momentum,
+    data[["Bull_XM_V2", "Bear_XM_V2"]] = data.apply(
+        pattern.extreme_momentum_v2,
         axis=1,
-        args=[data["SMA4_Slope"], data["SMA4"], data["ATR4"]],
-        result_type='expand',
-        period = 4
+        result_type='expand'
+    )
+
+    data["Sig_HClose"] = data.apply(
+        indicator.significant_hclose,
+        axis=1,
+        args=[data["Iday_HClose"],data["Day_Idx"]]        
+    )
+    data["Sig_LClose"] = data.apply(
+        indicator.significant_lclose,
+        axis=1,
+        args=[data["Iday_LClose"],data["Day_Idx"]]        
     )
 
     # return data
