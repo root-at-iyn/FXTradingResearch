@@ -42,7 +42,16 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["Yday_Open"] = data.apply(indicator.yesterday_open, axis=1, args=[data["Open"]])
     data["Yday_Close"] = data.apply(indicator.yesterday_close, axis=1, args=[data["Close"]])
-    data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
+    # Yday Body Pct Range
+    data["Yday_BPR"] = data.apply(
+        indicator.yesterday_body_pct_range, axis=1
+        )
+    # Yday Close Pct High
+    data["Yday_CPH"] = data.apply(indicator.yesterday_close_pct_high, axis=1)
+    # Yday Open Pct High
+    data["Yday_OPH"] = data.apply(indicator.yesterday_open_pct_high, axis=1)
+    # Average Daily Range
+    data["ADR"] = data.apply(indicator.ADR, axis=1, args=[12])
     # Average True Range
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])
     data["ATR4"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],4])
@@ -212,26 +221,12 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         result_type='expand'
         )
     # Momentum
-    data[["Bull_BM", "Bear_BM"]] = data.apply(
-    pattern.breakout_momentum, 
-    axis=1, 
-    args=[data["SMA4"], data["BBU_BO"], data["Bull_SMA_BO"],
-          data["BBL_BO"], data["Bear_SMA_BO"]],
-    result_type='expand'
-    )
     data["Bull_TM"] = data.apply(
         pattern.bullish_trend_momentum, axis=1
         )
     data["Bear_TM"] = data.apply(
         pattern.bearish_trend_momentum, axis=1
         )
-    # Support Resistance Signals (for backtesting)
-    data[["S_R_Signal", "S_R_Entry"]] = data.apply(
-        pattern.s_r_signal,
-        axis=1,
-        args=[data["S_R"], data["Close_Pct_High"], data["S_R_Level"]],
-        result_type='expand'
-    )
 
     # Bar Overlap
     data["Overlap"] = data.apply(
@@ -247,17 +242,7 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         result_type='expand'
     )
 
-    # Yesterday High Retest
-    data["Yday_High_RT"] = data.apply(
-        pattern.yday_high_retest,
-        args=[data["Close_Pct_High"]], 
-        axis=1
-        )
-    data["Yday_Low_RT"] = data.apply(
-        pattern.yday_low_retest,
-        args=[data["Close_Pct_High"]], 
-        axis=1
-        )
+
 
     # Return all features
     return data
@@ -281,11 +266,11 @@ if __name__ == '__main__':
 
     base_cols = [
         "Iday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
-        "Overlap_SMA", "IHR", "ILR"]
+        "Overlap_SMA", "Sig_HClose", "Sig_LClose"]
 
     # Print patterns
     # print(data['2025-03-11 17:15':'2025-03-12 16:45'][base_cols])
-    print(data[base_cols].query("ILR.notna() or IHR.notna()").tail(30))
+    print(data[base_cols].tail(96))
 
     # WRITE TO CSV
     # output feature enhanced price data to csv

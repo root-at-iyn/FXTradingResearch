@@ -36,7 +36,18 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Yday_Low"] = data.apply(indicator.yesterday_low, axis=1)
     data["Yday_Range"] = data.apply(indicator.yesterday_range, axis=1)
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
-    data["ADR"] = data.apply(indicator.ADR, axis=1, args=[30])
+    data["Yday_Open"] = data.apply(indicator.yesterday_open, axis=1, args=[data["Open"]])
+    data["Yday_Close"] = data.apply(indicator.yesterday_close, axis=1, args=[data["Close"]])
+    # Yday Body Pct Range
+    data["Yday_BPR"] = data.apply(
+        indicator.yesterday_body_pct_range, axis=1
+        )
+    # Yday Close Pct High
+    data["Yday_CPH"] = data.apply(indicator.yesterday_close_pct_high, axis=1)
+    # Yday Open Pct High
+    data["Yday_OPH"] = data.apply(indicator.yesterday_open_pct_high, axis=1)
+    # Average Daily Range
+    data["ADR"] = data.apply(indicator.ADR, axis=1, args=[12])
     # Average True Range
     data["ATR"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],12])
     data["ATR4"] = data.apply(indicator.ATR, axis=1, args=[data["Close"],4])
