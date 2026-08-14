@@ -135,12 +135,18 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         indicator.closes_gt_sma, axis=1, args=["SMA4"])
     data["Close_LT_SMA4"] = data.apply(
         indicator.closes_lt_sma, axis=1, args=["SMA4"])
+    # Volocity
+    data["Velocity"] = data.apply(
+        indicator.velocity,
+        axis=1,
+        args=[data["Close"],1, pipsize]
+    )
     # Momentum
     data["Momentum"] = data.apply(
         indicator.momentum,
         axis=1,
-        args=["SMA4_Slope", 70,
-              "SMA4_Slope_SMA", 45]
+        args=["SMA4", data["ATR4"],
+              data["Velocity"], data["High"],data["Low"]]
     )
     # Slope CHG
     data["Slope_CHG"] = data.apply(indicator.slope_diff, axis=1, args=[data["SMA4_Slope"]])
@@ -242,6 +248,12 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1, 
         args=[data["SMA16"],data["SMA32"]]
         )
+    data["BOD_Slope_16"] = data.apply(
+        indicator.sma_slope_v2,
+        axis=1,
+        args=[data["SMA16"],data["Iday_Idx"]],
+        pipsize = pipsize
+    )
     # Slope Trend
     data["Trend_16_32"] = data.apply(
         indicator.slope_trend,
@@ -250,12 +262,6 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
               "SMA32_Slope_SMA", 11.25, 
               "BS_SMA_16_32_X"],
         period = 16
-    )
-    # Volocity
-    data["Velocity"] = data.apply(
-        indicator.velocity,
-        axis=1,
-        args=[data["Close"],1, pipsize]
     )
     # Price Levels
     data["Levels"] = data.apply(

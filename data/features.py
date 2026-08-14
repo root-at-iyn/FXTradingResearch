@@ -185,6 +185,9 @@ class Indicator():
         # level test
         self.support_tested = {}
         self.resistance_tested = {}
+        # momentum
+        self.bullish_momentum_count = 0
+        self.bearish_momentum_count = 0
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -540,8 +543,8 @@ class Indicator():
             self, 
             df: Series, 
             sma: Series, 
-            lookback: int = 2, 
-            run: int = 3,
+            lookback: int = 1, 
+            run: int = 2,
             pipsize: int = 0.0001
         ):
         """Return the angle of the SMA slope"""
@@ -550,8 +553,23 @@ class Indicator():
         if idx >= lookback:
             # pipsize = 0.0001
             rise = (sma.iloc[idx] - sma.iloc[idx-lookback]) / pipsize
-            slope = rise / run
+            slope = rise / (lookback + 1)
             return atan(slope) * (180/pi)
+        
+    def sma_slope_v2(
+            self, 
+            df: Series, 
+            sma: Series, 
+            dynamic_lookback: Series,
+            pipsize: int = 0.0001
+            ):
+        """Return the angle of a slope since the dynamic_lookback period
+        
+        `dynamic_lookback`: A series of incrementing integers
+        """
+        idx = int(df["Idx"])
+        slope = self.sma_slope(df, sma, dynamic_lookback.iat[idx] ,pipsize=pipsize)
+        return slope
     
     def closes_gt_sma(self, df: Series, sma: str):
         """Return the number of bars since 
@@ -584,14 +602,20 @@ class Indicator():
         else:
             self.sma_not_crossed +=1
         return self.sma_not_crossed
+
+    def velocity(self, df: Series, price_point: Series, period: int, pipsize: float):
+        """Returns the velocity of price movement over time"""
+        idx = int(df["Idx"])
+        return ((price_point.iat[idx] - price_point.iat[idx-period])/pipsize) / (period+1)
     
     def momentum(
             self, 
             df: Series,
-            slope: str,  
-            slope_angle: int,
-            slope_sma: str,
-            slope_sma_angle: int
+            sma: str,  
+            atr: Series,
+            velocity: Series,
+            high: Series,
+            low: Series
             ):
         """Indicates whether price has bullish momentum or bearish momentum
         
@@ -601,14 +625,40 @@ class Indicator():
         - 0 = No Momentum
         """
         idx = int(df["Idx"])
-        if df[slope] > slope_angle \
-        and df[slope_sma] > slope_sma_angle:
-                return 1
-        elif df[slope] < -slope_angle \
-            and df[slope_sma] < -slope_sma_angle:
-                return -1
+        m = 0
+        # Bullish Momentum
+        if velocity.iat[idx-1] < 0 and velocity.iat[idx] > 0 \
+        and (velocity.iat[idx] + velocity.iat[idx-1]) > 0 \
+        and atr.iat[idx] > atr.iat[idx-1] \
+        and df["Close"] > df[sma] \
+        and df["Close"] > high.iat[idx-1]:
+            self.bullish_momentum_count = 0
+            m = 1
+            self.bullish_momentum_count += 1
+        elif velocity.iat[idx] > 0 \
+        and atr.iat[idx] > atr.iat[idx-1] \
+        and self.bullish_momentum_count > 0:
+            m = 1
+            self.bullish_momentum_count += 1
+        # Bearish Momentum
+        elif velocity.iat[idx-1] > 0 and velocity.iat[idx] < 0 \
+        and (velocity.iat[idx] + velocity.iat[idx-1]) < 0 \
+        and atr.iat[idx] > atr.iat[idx-1] \
+        and df["Close"] < df[sma] \
+        and df["Close"] < low.iat[idx-1]:
+            self.bearish_momentum_count = 0
+            m = -1
+            self.bearish_momentum_count += 1
+        elif velocity.iat[idx] < 0 \
+        and atr.iat[idx] > atr.iat[idx-1] \
+        and self.bearish_momentum_count > 0:
+            m = -1
+            self.bearish_momentum_count += 1
         else:
-            return 0
+            m = 0
+            self.bullish_momentum_count = 0
+            self.bearish_momentum_count = 0
+        return m
     
     def volatility_spike(self, df: Series, atr: Series, atr_multiplier: int = 2):
         """Return whether price volatility has spiked"""
@@ -630,12 +680,10 @@ class Indicator():
             ):
         """Returns if the fast and slow Simple Moving Averages are trending"""
         if df[fast_sma_slope] > fast_slope_angle \
-            and df[slow_sma_slope] > slow_slope_angle \
-            and df[bs_sma_x] >= period:
+            and df[slow_sma_slope] > slow_slope_angle:
             return 1
         elif df[fast_sma_slope] < -fast_slope_angle \
-            and df[slow_sma_slope] < -slow_slope_angle \
-            and df[bs_sma_x] >= period:
+            and df[slow_sma_slope] < -slow_slope_angle:
             return -1
         else:
             return 0
@@ -665,11 +713,6 @@ class Indicator():
         if slope.iloc[idx] < slope.iloc[idx-1] \
         and slope_sma.iloc[idx] < slope_sma.iloc[idx-1]:
             return -1
-        
-    def velocity(self, df: Series, price_point: Series, period: int, pipsize: float):
-        """Returns the velocity of price movement over time"""
-        idx = int(df["Idx"])
-        return ((price_point.iat[idx] - price_point.iat[idx-period])/pipsize) / period
     
     def levels(self, df: Series, col_names: list[str]):
         """Returns a list of price levels"""
