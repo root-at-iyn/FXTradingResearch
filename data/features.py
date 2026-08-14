@@ -159,6 +159,8 @@ class Indicator():
         self.yday_low = None
         self.yday_open = []
         self.yday_close = None
+        self.yday_hclose = None
+        self.yday_lclose = None
         self.daily_range = []
         self.adr = None
         self.day_idx = 0
@@ -170,6 +172,19 @@ class Indicator():
         self.sig_high = set()
         self.sig_low = set()
         self.true_range = []
+        self.close_gt_sma = 0
+        self.close_lt_sma = 0
+        self.sma_not_crossed = 0
+        # daily mother bar
+        self.dmb_range_high = None 
+        self.dmb_range_low = None
+        self.dmb_range_open = None 
+        self.dmb_range_close = None
+        self.dmb_range_hclose = None
+        self.dmb_range_lclose = None
+        # level test
+        self.support_tested = {}
+        self.resistance_tested = {}
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -203,10 +218,25 @@ class Indicator():
             return self.yday_open[-2]
 
     def yesterday_close(self, df: Series, close_price: Series):
+        """Returns the previous day's closing price"""
         idx = int(df["Idx"])
         if df["Day_Idx"] > 0 and df["Iday_Idx"] == 0:
             self.yday_close = close_price.iloc[idx-1]
         return self.yday_close
+
+    def yesterday_highest_close(self, df: Series, iday_hclose: Series):
+        """Returns the previous day's highest close"""
+        idx = int(df["Idx"])
+        if df["Day_Idx"] > 0 and df["Iday_Idx"] == 0:
+            self.yday_hclose = iday_hclose.iloc[idx-1]
+        return self.yday_hclose
+
+    def yesterday_lowest_close(self, df: Series, iday_lclose: Series):
+        """Returns the previous day's lowest close"""
+        idx = int(df["Idx"])
+        if df["Day_Idx"] > 0 and df["Iday_Idx"] == 0:
+            self.yday_lclose = iday_lclose.iloc[idx-1]
+        return self.yday_lclose
 
     def yesterday_close_pct_high(self, df: Series):
         """Returns percentage of yesterday's close from yesterday's high"""
@@ -221,7 +251,7 @@ class Indicator():
     def yesterday_body_pct_range(self, df: Series):
         """Returns percentage of yesterday's body (open-close) of yesterday's range"""
         if df["Day_Idx"] > 0:
-            return (df["Yday_Close"]-df["Yday_Open"])/df["Yday_Range"]
+            return abs((df["Yday_Close"]-df["Yday_Open"])/df["Yday_Range"])
     
     def ADR(self, df: Series, period: int):
         """Returns the average daily range for `period` trading sessions"""
@@ -518,11 +548,237 @@ class Indicator():
 
         idx = int(df["Idx"])
         if idx >= lookback:
-            pipsize = 0.0001
+            # pipsize = 0.0001
             rise = (sma.iloc[idx] - sma.iloc[idx-lookback]) / pipsize
             slope = rise / run
             return atan(slope) * (180/pi)
+    
+    def closes_gt_sma(self, df: Series, sma: str):
+        """Return the number of bars since 
+        the closing price has remained above the SMA"""
+        if df["Close"] > df[sma]:
+            self.close_gt_sma += 1
+        else:
+            self.close_gt_sma = 0
+        return self.close_gt_sma
 
+    def closes_lt_sma(self, df: Series, sma: str):
+        """Return the number of bars since 
+        the closing price has remained below the SMA"""
+        if df["Close"] < df[sma]:
+            self.close_lt_sma += 1
+        else:
+            self.close_lt_sma = 0
+        return self.close_lt_sma
+
+    def bars_since_sma_cross(self, df: Series, fast_sma: Series, slow_sma: Series):
+        """Return the number of bars since 
+        fast_sma and slow_sma crossed"""
+        idx = int(df["Idx"])
+        if fast_sma.iloc[idx-1] < slow_sma.iloc[idx-1] \
+            and fast_sma.iloc[idx] > slow_sma.iloc[idx]:
+            self.sma_not_crossed = 0
+        elif fast_sma.iloc[idx-1] > slow_sma.iloc[idx-1] \
+            and fast_sma.iloc[idx] < slow_sma.iloc[idx]:
+            self.sma_not_crossed = 0
+        else:
+            self.sma_not_crossed +=1
+        return self.sma_not_crossed
+    
+    def momentum(
+            self, 
+            df: Series,
+            slope: str,  
+            slope_angle: int,
+            slope_sma: str,
+            slope_sma_angle: int
+            ):
+        """Indicates whether price has bullish momentum or bearish momentum
+        
+        Return Values:
+        - 1 = Bullish Momentum
+        - -1 = Bearish Momentum
+        - 0 = No Momentum
+        """
+        idx = int(df["Idx"])
+        if df[slope] > slope_angle \
+        and df[slope_sma] > slope_sma_angle:
+                return 1
+        elif df[slope] < -slope_angle \
+            and df[slope_sma] < -slope_sma_angle:
+                return -1
+        else:
+            return 0
+    
+    def volatility_spike(self, df: Series, atr: Series, atr_multiplier: int = 2):
+        """Return whether price volatility has spiked"""
+        idx = int(df["Idx"])
+        if atr.iloc[idx] > (atr.iloc[idx-1] * atr_multiplier):
+            return True
+        else:
+            return False
+        
+    def slope_trend(
+            self, 
+            df: Series, 
+            fast_sma_slope: str,
+            fast_slope_angle: int, 
+            slow_sma_slope: str,
+            slow_slope_angle: int,
+            bs_sma_x: str, 
+            period: int = 16
+            ):
+        """Returns if the fast and slow Simple Moving Averages are trending"""
+        if df[fast_sma_slope] > fast_slope_angle \
+            and df[slow_sma_slope] > slow_slope_angle \
+            and df[bs_sma_x] >= period:
+            return 1
+        elif df[fast_sma_slope] < -fast_slope_angle \
+            and df[slow_sma_slope] < -slow_slope_angle \
+            and df[bs_sma_x] >= period:
+            return -1
+        else:
+            return 0
+    
+    def slope_diff(self, df: Series, slope: Series):
+        """Returns the SMA Slope change"""
+        idx = df["Idx"]
+        return (slope.iloc[idx] - slope.iloc[idx-1])
+        
+    def slope_dvg(self, df: Series, slope: Series, slope_sma: Series):
+        "Returns whether the slope and slope_sma are diverging"
+        idx = int(df["Idx"])
+        if slope.iloc[idx-1] < -45 and slope_sma.iloc[idx-1] < -45 \
+        and df["Slope_CHG"] > 22.5:
+            return 1
+        elif slope.iloc[idx-1] > 45 and slope_sma.iloc[idx-1] > 45 \
+        and df["Slope_CHG"] < -22.5:
+            return -1
+        else:
+            return 0
+        
+    def slope_sync(self, df: Series, slope: Series, slope_sma: Series):
+        idx = int(df["Idx"])
+        if slope.iloc[idx] > slope.iloc[idx-1] \
+        and slope_sma.iloc[idx] > slope_sma.iloc[idx-1]:
+            return 1
+        if slope.iloc[idx] < slope.iloc[idx-1] \
+        and slope_sma.iloc[idx] < slope_sma.iloc[idx-1]:
+            return -1
+        
+    def velocity(self, df: Series, price_point: Series, period: int, pipsize: float):
+        """Returns the velocity of price movement over time"""
+        idx = int(df["Idx"])
+        return ((price_point.iat[idx] - price_point.iat[idx-period])/pipsize) / period
+    
+    def levels(self, df: Series, col_names: list[str]):
+        """Returns a list of price levels"""
+        price_levels = [df[col] for col in col_names]
+        return price_levels
+    
+    def level_tested(
+            self, 
+            df: Series, 
+            levels: Series, 
+            open: Series, 
+            high: Series, 
+            low: Series, 
+            close: Series
+            ):
+        """Returns if a price `level` was tested
+
+        Levels: a list of price levels to check
+        """
+        idx = int(df["Idx"])
+        s_test = False
+        s_level = 0
+        s_test_count = 0
+        r_test = False
+        r_level = 0
+        r_test_count = 0
+
+        if df["Iday_Idx"] == 0:
+            self.support_tested = {}
+            self.resistance_tested = {}
+        # Two-bar Bullish Rejection
+        if idx > 0 and levels.empty is False:
+            for level in levels.iat[idx]:
+                if open.iat[idx-1] > level and close.iat[idx-1] < level \
+                and open.iat[idx] < level and close.iat[idx] > level:
+                    if level not in self.support_tested.keys():
+                        self.support_tested[level] = 0
+                    self.support_tested[level] += 1
+                    s_test = True
+                    s_level = level
+                    s_test_count = self.support_tested[level]
+                    break
+            # Single-bar Bullish Rejection
+                if open.iat[idx] > level and low.iat[idx] <= level \
+                and close.iat[idx] > level:
+                    if level not in self.support_tested.keys():
+                        self.support_tested[level] = 0
+                    self.support_tested[level] += 1
+                    s_test = True
+                    s_level = level
+                    s_test_count = self.support_tested[level]
+                    break
+            # Two-bar Bearish Rejection
+                if open.iat[idx-1] < level and close.iat[idx-1] > level \
+                and open.iat[idx] > level and close.iat[idx] < level:
+                    if level not in self.resistance_tested.keys():
+                        self.resistance_tested[level] = 0
+                    self.resistance_tested[level] +=1
+                    r_test = True
+                    r_level = level
+                    r_test_count = self.resistance_tested[level]
+                    break
+            # Single-bar Bearish Rejection
+                if open.iat[idx] < level and high.iat[idx] >= level \
+                and close.iat[idx] < level:
+                    if level not in self.resistance_tested.keys():
+                        self.resistance_tested[level] = 0
+                    self.resistance_tested[level] +=1
+                    r_test = True
+                    r_level = level
+                    r_test_count = self.resistance_tested[level]
+                    break
+
+        # return data
+        return s_test, s_level, s_test_count, r_test, r_level, r_test_count
+
+    def daily_inside_bar(
+            self, 
+            df: Series, 
+            yday_high: Series, 
+            yday_low: Series,
+            yday_open: Series,
+            yday_close: Series,
+            yday_hclose: Series,
+            yday_lclose: Series
+            ):
+        """Return index of daily trading range"""
+        inside_day = False
+        idx = int(df["Idx"])
+        if df["Day_Idx"] > 0 and df["Iday_Idx"] == 0:
+            yday_open_close_max = max([df["Yday_Close"],df["Yday_Open"]])
+            yday_open_close_min = min([df["Yday_Close"],df["Yday_Open"]])
+            if self.dmb_range_high is None and self.dmb_range_low is None:
+                self.dmb_range_high = yday_high.iloc[idx-1]
+                self.dmb_range_low = yday_low.iloc[idx-1]
+                self.dmb_range_open = yday_open.iloc[idx-1]
+                self.dmb_range_close = yday_close.iloc[idx-1]
+                self.dmb_range_hclose = yday_hclose.iloc[idx-1]
+                self.dmb_range_lclose = yday_lclose.iloc[idx-1]
+            if self.dmb_range_high is not None and self.dmb_range_low is not None\
+                and yday_open_close_max < self.dmb_range_high and yday_open_close_min > self.dmb_range_low:
+                pass
+            else:
+                self.dmb_range_high = None 
+                self.dmb_range_low = None
+        if self.dmb_range_high is not None and self.dmb_range_low is not None:
+            inside_day = True
+
+        return inside_day
 
 class Pattern():
     """Class for custom chart patterns"""
@@ -537,6 +793,9 @@ class Pattern():
         self.close = close
         self.range = range
         self.body = body
+        self.mother_bar = None
+        self.mb_high = None
+        self.mb_low = None
 
     def current_bar(self, df: Series):
         return 1 if df["Close"] > df["Open"] else \
@@ -1012,7 +1271,7 @@ class Pattern():
         and (df["Close"] - self.low.iloc[idx-1]) / \
         self.range.iloc[idx-1] > 0.75 \
         and df["Close_Pct_High"] < 0.34 \
-        and self.close.iloc[idx-1] == df["Iday_LClose"]:
+        and df["Close_Pct_DHigh"] > 0.66:
             bullish_pb_fail = True
         # Failed Hammer
         if bull_pinbar.iloc[idx-1] is True \
@@ -1020,64 +1279,37 @@ class Pattern():
         and (self.high.iloc[idx-1] - df["Close"]) / \
         self.range.iloc[idx-1] > 0.75 \
         and df["Close_Pct_High"] > 0.66 \
-        and self.close.iloc[idx-1] == df["Iday_HClose"]:
+        and df["Close_Pct_DHigh"] < 0.34:
             bearish_pb_fail = True
         return bullish_pb_fail, bearish_pb_fail
     
     def inside_bar(
             self, 
-            df: Series, 
-            close_pct_high: Series, 
-            bbu: Series, 
-            bbl: Series
+            df: Series,
             ):
-        """Inside bar in direction of SMA16"""
+        """Return whether the open and close of the current bar
+        is inside the high and low of the previous bar"""
         idx = int(df["Idx"])
-        bullish_inside_bar = False
-        bearish_inside_bar = False
-        prev_close = self.close.iloc[idx-1]
-        prev_open = self.open.iloc[idx-1]
-        prev_high = self.high.iloc[idx-1]
-        prev_low = self.low.iloc[idx-1]
         open_close_max = max([df["Open"],df["Close"]])
         open_close_min = min([df["Open"],df["Close"]])
-
-        # Bullish Inside Bar
-        if prev_close < bbu.iloc[idx-1] \
-        and df["SMA32_Slope_SMA"] > 11.25 \
-        and df["SMA16_Slope_SMA"] > 22.5:
-            if prev_close < prev_open \
-            and self.current_bar(df) == 1 \
-            and df["High"] < prev_high \
-            and df["Low"] > prev_low:
-                bullish_inside_bar = True
-            if prev_close < prev_open \
-            and close_pct_high.iloc[idx-1] > 0.66 \
-            and df["High"] < prev_high \
-            and df["Low"] > prev_low \
-            and df["Close"] < df["SMA16"] \
-            and df["Close"] > df["SMA32"] \
-            and df["SMA16"] > df["SMA32"]:
-                bullish_inside_bar = True
-        # Bearish Inside Bar
-        if prev_close > bbl.iloc[idx-1] \
-        and df["SMA32_Slope_SMA"] < -11.25 \
-        and df["SMA16_Slope_SMA"] < -22.5:
-            if prev_close > prev_open \
-            and self.current_bar(df) == -1 \
-            and df["High"] < prev_high \
-            and df["Low"] > prev_low:
-                bearish_inside_bar = True
-            if prev_close > prev_open \
-            and close_pct_high.iloc[idx-2] < 0.34 \
-            and df["High"] < prev_high \
-            and df["Low"] > prev_low \
-            and df["Close"] > df["SMA16"] \
-            and df["Close"] < df["SMA32"] \
-            and df["SMA16"] < df["SMA32"]:
-                bearish_inside_bar = True
-        # return data
-        return bullish_inside_bar, bearish_inside_bar
+        prev_high = self.high.iloc[idx-1]
+        prev_low = self.low.iloc[idx-1]
+        inside_bar = False
+        #
+        if self.mother_bar is None and open_close_max < prev_high and open_close_min > prev_low:
+            self.mother_bar = int(idx-1)
+            self.mb_high = self.high.iloc[self.mother_bar]
+            self.mb_low = self.low.iloc[self.mother_bar]
+            inside_bar = True
+        elif self.mother_bar is not None and open_close_max < self.mb_high \
+        and open_close_min > self.mb_low:
+            inside_bar = True 
+        else:
+            self.mother_bar = None
+            self.mb_high = None 
+            self.mb_low = None
+        #
+        return inside_bar, self.mother_bar, self.mb_high, self.mb_low
 
 
     def bullish_sma_breakout(self, df: Series):
@@ -1121,56 +1353,51 @@ class Pattern():
             return True
                        
 
-    def bullish_trend_momentum(
+    def bullish_momentum(
             self, 
-            df: Series
+            df: Series,
+            atr: Series,
+            close_gt_sma: str,
+            period: int
             ):
             """
-            Bullish momentum during a retracement or uptrend
+            Returns if price is rapidly increasing above the average price
             """
             idx = int(df["Idx"])
-            # low condition
-            low_condition = None 
-            if df["Close"] > self.high.iloc[idx-1] \
-            and (df["Close"] - df["BB_Upper_16_2"]) / \
-            df["ATR4"] < 0.33:
-                low_condition = True
-                
-            # sharp momentum along the SMA4 Slope
-            if df["SMA4_Slope"] >= 45 \
-            and low_condition is True:
-                return True
-            # SMA4 uptrend (covers SMA4 Slope pullbacks)
-            elif df["SMA4_Slope"] > 22.5 \
-            and low_condition is True \
-            and df["Body"] > df["ATR"]:
-                return True
+            open_close_max = max([df["Open"],df["Close"]])
+            open_close_min = min([df["Open"],df["Close"]])
+            prev_high = self.high.iloc[idx-1]
+            prev_low = self.low.iloc[idx-1]
+            if df["Momentum"] == 1 \
+            and open_close_max < prev_high \
+            and open_close_min > prev_low:
+                if atr.iloc[idx] > atr.iloc[idx-1]:
+                    return True
+                elif df[close_gt_sma] >= period:
+                    return True
             
-    def bearish_trend_momentum(
+    def bearish_momentum(
             self, 
-            df: Series
+            df: Series,
+            atr: Series,
+            close_lt_sma: str,
+            period: int
             ):
             """
-            Bearish momentum during a retracement or uptrend
+            Returns if price is rapidly decreasing below the average price
             """
             idx = int(df["Idx"])
-            # high condition
-            low_condition = None 
-            if df["Close"] < self.low.iloc[idx-1] \
-            and (df["BB_Lower_16_2"] - df["Close"]) / \
-            df["ATR4"] < 0.33:
-                low_condition = True
-            
-            # sharp momentum along the SMA4 Slope
-            if df["SMA4_Slope"] <= -45 \
-            and low_condition is True:
-                return True
-            # SMA16 downtrend (covers SMA4 Slope pullbacks)
-            elif df["SMA4_Slope"] < -22.5 \
-            and low_condition is True \
-            and df["Body"] > df["ATR"]:
-                return True
-                
+            open_close_max = max([df["Open"],df["Close"]])
+            open_close_min = min([df["Open"],df["Close"]])
+            prev_high = self.high.iloc[idx-1]
+            prev_low = self.low.iloc[idx-1]
+            if df["Momentum"] == -1 \
+            and open_close_max <= prev_high \
+            and open_close_min >= prev_low:
+                if atr.iloc[idx] > atr.iloc[idx-1]:
+                    return True
+                elif df[close_lt_sma] >= period:
+                    return True
 
     def bar_overlap(
             self, 
@@ -1231,4 +1458,46 @@ class Pattern():
                     bearish_extreme_momentum_v2 = True
         # return tuple
         return bullish_extreme_momentum_v2, bearish_extreme_momentum_v2
+
+    def bullish_pullback(
+            self, 
+            df: Series, 
+            fast_sma: Series,
+            fast_sma_slope: str ,
+            slow_sma: Series,
+            slow_sma_slope: str,
+            slope_trend: str = "Trend_16_32"
+            ):
+        """Pullback prior to move high in uptrend"""
+        idx = int(df["Idx"])
+        if df[slope_trend] == 1:
+            if self.close.iloc[idx-1] > fast_sma.iloc[idx-1] \
+            and self.close.iloc[idx] < fast_sma.iloc[idx] \
+            and df[fast_sma_slope] >= 22.5:
+                return True
+            if self.close.iloc[idx-1] > slow_sma.iloc[idx-1] \
+            and self.close.iloc[idx] < slow_sma.iloc[idx] \
+            and df[slow_sma_slope] >= 22.5:
+                return True
+
+    def bearish_pullback(
+            self, 
+            df: Series,
+            fast_sma: Series,
+            fast_sma_slope: str ,
+            slow_sma: Series,
+            slow_sma_slope: str,
+            slope_trend: str = "Trend_16_32"
+            ):
+        """Pullback prior to move lower in downtrend"""
+        idx = int(df["Idx"])
+        if df[slope_trend] == -1:
+            if self.close.iloc[idx-1] < fast_sma.iloc[idx-1] \
+            and self.close.iloc[idx] > fast_sma.iloc[idx] \
+            and df[fast_sma_slope] <= -22.5:
+                return True
+            if self.close.iloc[idx-1] < slow_sma.iloc[idx-1] \
+            and self.close.iloc[idx] > slow_sma.iloc[idx] \
+            and df[slow_sma_slope] <= -22.5:
+                return True
 

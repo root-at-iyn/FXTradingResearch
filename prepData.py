@@ -42,6 +42,16 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["Yday_Open"] = data.apply(indicator.yesterday_open, axis=1, args=[data["Open"]])
     data["Yday_Close"] = data.apply(indicator.yesterday_close, axis=1, args=[data["Close"]])
+    data["Yday_HClose"] = data.apply(
+        indicator.yesterday_highest_close, 
+        axis=1, 
+        args=[data["Iday_HClose"]]
+        )
+    data["Yday_LClose"] = data.apply(
+        indicator.yesterday_lowest_close, 
+        axis=1, 
+        args=[data["Iday_LClose"]]
+        )
     # Yday Body Pct Range
     data["Yday_BPR"] = data.apply(
         indicator.yesterday_body_pct_range, axis=1
@@ -137,6 +147,41 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
                                          args=[16, data["SMA16_Slope"]])
     data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[16, data["SMA32_Slope"]])
+    # Nbr Closes Above/Below SMA
+    data["Close_GT_SMA4"] = data.apply(
+        indicator.closes_gt_sma, axis=1, args=["SMA4"])
+    data["Close_LT_SMA4"] = data.apply(
+        indicator.closes_lt_sma, axis=1, args=["SMA4"])
+    # Bars Since SMA Crossed
+    data["BS_SMA_16_32_X"] = data.apply(
+        indicator.bars_since_sma_cross, 
+        axis=1, 
+        args=[data["SMA16"],data["SMA32"]]
+        )
+    # Momentum
+    data["Momentum"] = data.apply(
+        indicator.momentum,
+        axis=1,
+        args=["Close_GT_SMA4", "Close_LT_SMA4"],
+        period = 4
+    )
+    # Volatility Spike
+    data["Vol_Spike"] = data.apply(
+        indicator.volatility_spike, 
+        axis=1, 
+        args=[data["ATR4"]],
+        atr_multiplier = 2
+        )
+    # Slope Trend
+    data["Trend_16_32"] = data.apply(
+        indicator.slope_trend,
+        axis=1,
+        args=["SMA16_Slope_SMA", 22.5, 
+              "SMA32_Slope_SMA", 11.25, 
+              "BS_SMA_16_32_X"],
+        period = 16
+    )
+
     # Patterns
     pattern = Pattern(
         data["Open"],
@@ -213,21 +258,6 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         args=[data["Bull_Pinbar"], data["Bear_Pinbar"]],
         result_type='expand'
         )
-    data[["Bull_IB", "Bear_IB"]] = data.apply(
-        pattern.inside_bar, 
-        axis=1,
-        args=[data["Close_Pct_High"],
-              data["BB_Upper_16_2"], data["BB_Lower_16_2"]],
-        result_type='expand'
-        )
-    # Momentum
-    data["Bull_TM"] = data.apply(
-        pattern.bullish_trend_momentum, axis=1
-        )
-    data["Bear_TM"] = data.apply(
-        pattern.bearish_trend_momentum, axis=1
-        )
-
     # Bar Overlap
     data["Overlap"] = data.apply(
         pattern.bar_overlap, 
@@ -241,8 +271,34 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         axis=1,
         result_type='expand'
     )
+    # Pullback
+    data["Bull_Pullback"] = data.apply(
+        pattern.bullish_pullback, 
+        axis=1,
+        args=[data["SMA16"],"SMA16_Slope",
+              data["SMA32"],"SMA32_Slope"]
+        )
+    data["Bear_Pullback"] = data.apply(
+        pattern.bearish_pullback, 
+        axis=1,
+        args=[data["SMA16"],"SMA16_Slope",
+              data["SMA32"],"SMA32_Slope"]
+        )
 
+    # Inside bar
+    data[["IB","MB_Idx","MB_High","MB_Low"]] = data.apply(
+        pattern.inside_bar,
+        axis=1,
+        result_type='expand'
+        )
 
+    # Momentum
+    data["Bull_M"] = data.apply(
+        pattern.bullish_momentum, axis=1
+        )
+    data["Bear_M"] = data.apply(
+        pattern.bearish_momentum, axis=1
+        )
 
     # Return all features
     return data
@@ -265,12 +321,12 @@ if __name__ == '__main__':
     pd.options.display.max_rows = 100
 
     base_cols = [
-        "Iday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
-        "Overlap_SMA", "Sig_HClose", "Sig_LClose"]
+        "Iday_Range","Yday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
+        "Trend_16_32", "Vol_Spike", "Momentum","BS_SMA_16_32_X"]
 
     # Print patterns
     # print(data['2025-03-11 17:15':'2025-03-12 16:45'][base_cols])
-    print(data[base_cols].tail(96))
+    print(data[base_cols].tail(100))
 
     # WRITE TO CSV
     # output feature enhanced price data to csv

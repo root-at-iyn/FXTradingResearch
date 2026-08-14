@@ -38,6 +38,16 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Day_Idx"] = data.apply(indicator.day_index, axis=1)
     data["Yday_Open"] = data.apply(indicator.yesterday_open, axis=1, args=[data["Open"]])
     data["Yday_Close"] = data.apply(indicator.yesterday_close, axis=1, args=[data["Close"]])
+    data["Yday_HClose"] = data.apply(
+        indicator.yesterday_highest_close, 
+        axis=1, 
+        args=[data["Iday_HClose"]]
+        )
+    data["Yday_LClose"] = data.apply(
+        indicator.yesterday_lowest_close, 
+        axis=1, 
+        args=[data["Iday_LClose"]]
+        )
     # Yday Body Pct Range
     data["Yday_BPR"] = data.apply(
         indicator.yesterday_body_pct_range, axis=1
@@ -120,6 +130,24 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1, 
         args=["SMA4","SMA16","SMA32"]
         )
+    # Nbr Closes Above/Below SMA
+    data["Close_GT_SMA4"] = data.apply(
+        indicator.closes_gt_sma, axis=1, args=["SMA4"])
+    data["Close_LT_SMA4"] = data.apply(
+        indicator.closes_lt_sma, axis=1, args=["SMA4"])
+    # Momentum
+    data["Momentum"] = data.apply(
+        indicator.momentum,
+        axis=1,
+        args=["SMA4_Slope", 70,
+              "SMA4_Slope_SMA", 45]
+    )
+    # Slope CHG
+    data["Slope_CHG"] = data.apply(indicator.slope_diff, axis=1, args=[data["SMA4_Slope"]])
+    # Slope DVG
+    data["Slope_DVG"] = data.apply(indicator.slope_dvg, axis=1, args=[data["SMA4_Slope"], data["SMA4_Slope_SMA"]])
+    # Slope Sync
+    data["Slope_Sync"] = data.apply(indicator.slope_sync, axis=1, args=[data["SMA4_Slope"], data["SMA4_Slope_SMA"]])
     
     # Patterns
     pattern = Pattern(
@@ -136,24 +164,10 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_Pinbar"] = data.apply(pattern.bullish_pinbar, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
     data["Bear_Pinbar"] = data.apply(pattern.bearish_pinbar, axis=1)
-    # Bullish Trend Momentum
-    data["Bull_TM"] = data.apply(
-        pattern.bullish_trend_momentum, axis=1
-        )
-    # Bearish Trend momentum
-    data["Bear_TM"] = data.apply(
-        pattern.bearish_trend_momentum, axis=1
-        )
+
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
         axis=1,
-        result_type='expand'
-        )
-    data[["Bull_IB", "Bear_IB"]] = data.apply(
-        pattern.inside_bar, 
-        axis=1,
-        args=[data["Close_Pct_High"],data["BB_Upper_16_2"], 
-              data["BB_Lower_16_2"]],
         result_type='expand'
         )
     
@@ -206,6 +220,83 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         args=[data["Iday_LClose"],data["Day_Idx"]]        
     )
+    data["Close_GT_SMA4"] = data.apply(
+        indicator.closes_gt_sma, axis=1, args=["SMA4"])
+    data["Close_LT_SMA4"] = data.apply(
+        indicator.closes_lt_sma, axis=1, args=["SMA4"])
+    data[["IB","MB_Idx","MB_High","MB_Low"]] = data.apply(
+        pattern.inside_bar,
+        axis=1,
+        result_type='expand'
+        )
+        # Volatility Spike
+    data["Vol_Spike"] = data.apply(
+        indicator.volatility_spike, 
+        axis=1, 
+        args=[data["ATR4"]],
+        atr_multiplier = 2
+        )
+    # Bars Since SMA Crossed
+    data["BS_SMA_16_32_X"] = data.apply(
+        indicator.bars_since_sma_cross, 
+        axis=1, 
+        args=[data["SMA16"],data["SMA32"]]
+        )
+    # Slope Trend
+    data["Trend_16_32"] = data.apply(
+        indicator.slope_trend,
+        axis=1,
+        args=["SMA16_Slope_SMA", 22.5, 
+              "SMA32_Slope_SMA", 11.25, 
+              "BS_SMA_16_32_X"],
+        period = 16
+    )
+    # Volocity
+    data["Velocity"] = data.apply(
+        indicator.velocity,
+        axis=1,
+        args=[data["Close"],1, pipsize]
+    )
+    # Price Levels
+    data["Levels"] = data.apply(
+        indicator.levels, 
+        axis=1, 
+        args=[["Iday_HClose","Iday_LClose"]])
+
+    # level tested
+    data[["S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count"]] = data.apply(
+        indicator.level_tested,
+        axis=1,
+        args=[
+            data["Levels"], data["Open"], data["High"],
+            data["Low"], data["Close"]
+        ],
+        result_type='expand'
+    )
+
+    # Pullback
+    data["Bull_Pullback"] = data.apply(
+        pattern.bullish_pullback, 
+        axis=1,
+        args=[data["SMA16"],"SMA16_Slope",
+              data["SMA32"],"SMA32_Slope"]
+        )
+    data["Bear_Pullback"] = data.apply(
+        pattern.bearish_pullback, 
+        axis=1,
+        args=[data["SMA16"],"SMA16_Slope",
+              data["SMA32"],"SMA32_Slope"]
+        )
+    # Bullish Momentum
+    data["Bull_M"] = data.apply(
+        pattern.bullish_momentum, axis=1,
+        args=[data["ATR4"],"Close_GT_SMA4",4 ]
+        )
+    # Bearish Momentum
+    data["Bear_M"] = data.apply(
+        pattern.bearish_momentum, axis=1,
+        args=[data["ATR4"], "Close_LT_SMA4",4]
+        )
 
     # return data
     return data

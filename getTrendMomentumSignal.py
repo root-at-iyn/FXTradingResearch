@@ -9,13 +9,13 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
     app.reqHistoricalData(
         app.nextId(),
         contract,
-        "", # empty str to get most recent data
+        "", # empty str to get most recent data / test data 20260715 16:45:00 US/Eastern
         "14 D",
         "15 mins",
         "MIDPOINT",
         0, # get data out of RTH
         2, # Epoch timestamp
-        True,
+        False,
         []
     )
 
@@ -69,7 +69,12 @@ if __name__ == '__main__':
     #clean IBKR data
     df.drop(columns=["Volume", "WAP", "BarCount"], inplace=True)
     # apply features to dataframe
-    data = apply_trend_momentum(df, pipsize=0.0001)
+    pip = 0
+    if quote == "JPY":
+        pip = 0.01
+    else:
+        pip = 0.0001
+    data = apply_trend_momentum(df, pipsize=pip)
     data["Symbol"] = base + quote
     data["Entry"] = data.apply(lambda x: x["Close"], axis=1)
     data["SL"] = data.apply(lambda x: x["ATR4"] * sl, axis=1)
@@ -77,12 +82,12 @@ if __name__ == '__main__':
      
     # show data
     pd.options.display.max_rows = 100
-    cols = ["Entry", "SMA4_Slope", 
-            "Bull_TM", "Bear_TM", "ATR4", "Range","ADR",
+    cols = ["Entry", "SMA4_Slope", "SMA4_Slope_SMA",
+            "ATR4", "Range","ADR",
             "Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2",
-            "SMA4_Slope_SMA", "SMA16_Slope_SMA", "SMA32_Slope_SMA"]
-    trade_entry = ["Symbol", "Bull_TM", "Bear_TM","Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2", 
-                   "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range", "ADR", "Yday_Open"]
-    print(data[cols].tail(100),"\n")
+            "S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count"]
+    trade_entry = ["Symbol", "Bull_M", "Bear_M","Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2", 
+                   "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range", "ADR", "Yday_BPR"]
+    print(data[cols].tail(100).round(6),"\n")
     data.to_csv(f"./research/price_data/FE_latest.csv")
     print(data[trade_entry].tail(1))
