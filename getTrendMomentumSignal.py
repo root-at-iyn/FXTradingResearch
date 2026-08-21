@@ -9,7 +9,7 @@ def ibapiHistoricalDataReq(app: IBClient, contract: Contract):
     app.reqHistoricalData(
         app.nextId(),
         contract,
-        "", # empty str to get most recent data / test data 20260715 16:45:00 US/Eastern
+        "20260818 16:45:00 US/Eastern", # empty str to get most recent data / test data 20260715 16:45:00 US/Eastern
         "14 D",
         "15 mins",
         "MIDPOINT",
@@ -82,12 +82,13 @@ if __name__ == '__main__':
      
     # show data
     pd.options.display.max_rows = 100
-    cols = ["Entry", "SMA4_Slope", "SMA4_Slope_SMA",
+    cols = ["Entry", "SMA4_Slope",
             "ATR4", "Range","ADR",
-            "Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2",
-            "BS_SMA_16_32_X", "BOD_Slope_16","Velocity","Momentum"]
+            "Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2", "Momentum",
+            "D_IB","DMB_H_Idx","DMB_H", "DMB_L_Idx", "DMB_L","DMB_H_Max_Rtm","DMB_H_Rtm", "DMB_L_Max_Rtm", "DMB_L_Rtm"]
     trade_entry = ["Symbol", "Bull_M", "Bear_M","Bull_TC", "Bear_TC","Bull_XM_V2", "Bear_XM_V2", 
                    "SL", "TP", "SMA4_Slope", "Iday_Range", "Yday_Range", "ADR", "Yday_BPR"]
+   # "Max_L_Rtm > 1.61 and H_Rtm > 0.618 and SMA16 > SMA32 and BOD_Slope_16 > 11.25 and SMA32_Slope > 5"
     print(data[cols].tail(100).round(6),"\n")
     data.to_csv(f"./research/price_data/FE_latest.csv")
     print(data[trade_entry].tail(1))

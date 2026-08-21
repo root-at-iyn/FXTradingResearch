@@ -22,10 +22,14 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     # intraday properties
     intraday = Intraday()
     data["Iday_Idx"] = data.apply(intraday.index, axis=1, args=[data.index])
-    data["Iday_High"] = data.apply(intraday.high, axis=1)
-    data["Iday_Low"] = data.apply(intraday.low, axis=1)
-    data["Iday_HClose"] = data.apply(intraday.highest_close, axis=1)
-    data["Iday_LClose"] = data.apply(intraday.lowest_close, axis=1)
+    data[["Iday_High","Iday_H_Idx"]] = data.apply(
+        intraday.high, axis=1, result_type='expand')
+    data[["Iday_Low", "Iday_L_Idx"]] = data.apply(
+        intraday.low, axis=1, result_type='expand')
+    data[["Iday_HClose", "Iday_HC_Idx"]] = data.apply(
+        intraday.highest_close, axis=1, result_type='expand')
+    data[["Iday_LClose", "Iday_LC_Idx"]] = data.apply(
+        intraday.lowest_close, axis=1, result_type='expand')
     data["Iday_Range"] = data.apply(intraday.range, axis=1)
     data["Close_Pct_DHigh"] = data.apply(intraday.close_pct_iday_high, axis=1)
     data["Open_Pct_DHigh"] = data.apply(intraday.open_pct_iday_high, axis=1)
@@ -122,7 +126,8 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Sig_Low"] = data.apply(
         indicator.significant_low, 
         axis=1, 
-        args=[data["Iday_Low"], data["Day_Idx"]]
+        args=[data["Iday_Low"], data["Day_Idx"]],
+        period = 8
         )
     # SMA Trend
     data["SMA_Trend"] = data.apply(
@@ -141,11 +146,22 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         args=[data["Close"],1, pipsize]
     )
+    data["Velocity_H"] = data.apply(
+        indicator.velocity,
+        axis=1,
+        args=[data["High"],1, pipsize]
+    )
+    data["Velocity_L"] = data.apply(
+        indicator.velocity,
+        axis=1,
+        args=[data["Low"],1, pipsize]
+    )
+
     # Momentum
     data["Momentum"] = data.apply(
         indicator.momentum,
         axis=1,
-        args=["SMA4", data["ATR4"],
+        args=["SMA4", "SMA4_Slope", 45, data["ATR4"],
               data["Velocity"], data["High"],data["Low"]]
     )
     # Slope CHG
@@ -155,6 +171,20 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     # Slope Sync
     data["Slope_Sync"] = data.apply(indicator.slope_sync, axis=1, args=[data["SMA4_Slope"], data["SMA4_Slope_SMA"]])
     
+    # Daily Inside Bar
+    data[["D_IB","DMB_H_Idx","DMB_H", "DMB_L_Idx","DMB_L"]] = data.apply(
+        indicator.daily_inside_bar,
+        axis=1,
+        args=[
+            data["Yday_High"], data["Yday_Low"],
+            data["Yday_Open"], data["Yday_Close"],
+            data["Yday_HClose"], data["Yday_LClose"],
+            data["Iday_Idx"], data["Iday_High"], data["Iday_Low"]
+        ],
+        result_type='expand'
+    )
+
+
     # Patterns
     pattern = Pattern(
         data["Open"],
@@ -176,38 +206,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         result_type='expand'
         )
-    
-    # Intraday Range Reversals
-    data["ILR"] = data.apply(pattern.intraday_low_reversal, axis=1)
-    data["IHR"] = data.apply(pattern.intraday_high_reversal, axis=1)
-    # Support / Resistance
-    data[["S_R", "S_R_Level"]] = data.apply(
-        pattern.support_resistance, 
-        axis=1,
-        args=[data["Sig_High"], data["Sig_Low"]],
-        result_type='expand'
-        )
 
-    # Bearish Bollinger Band Reversals
-    data["Bear_BBR_C1"] = data.apply(
-        pattern.bearish_bb_reversal_c1,
-        axis=1,
-        args=[data["BB_Upper_16_2"]]
-    )
-    data["Bear_BBR_C2"] = data.apply(pattern.bearish_bb_reversal_c2, axis=1)
-    data["Bear_BBR_C3"] = data.apply(pattern.bearish_bb_reversal_c3, axis=1)
-    data["Bear_BBR_C4"] = data.apply(pattern.bearish_bb_reversal_c4, axis=1)
-    data["Bear_BBR_V2"] = data.apply(pattern.bearish_bb_reversal_v2, axis=1)
-    # Bullish Bollinger Band Reversals
-    data["Bull_BBR_C1"] = data.apply(
-        pattern.bullish_bb_reversal_c1,
-        axis=1,
-        args=[data["BB_Lower_16_2"]]
-    )
-    data["Bull_BBR_C2"] = data.apply(pattern.bullish_bb_reversal_c2, axis=1)
-    data["Bull_BBR_C3"] = data.apply(pattern.bullish_bb_reversal_c3, axis=1)
-    data["Bull_BBR_C4"] = data.apply(pattern.bullish_bb_reversal_c4, axis=1)
-    data["Bull_BBR_V2"] = data.apply(pattern.bullish_bb_reversal_v2, axis=1)
 
     # Extreme Momentum
     data[["Bull_XM_V2", "Bear_XM_V2"]] = data.apply(
@@ -226,10 +225,6 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         args=[data["Iday_LClose"],data["Day_Idx"]]        
     )
-    data["Close_GT_SMA4"] = data.apply(
-        indicator.closes_gt_sma, axis=1, args=["SMA4"])
-    data["Close_LT_SMA4"] = data.apply(
-        indicator.closes_lt_sma, axis=1, args=["SMA4"])
     data[["IB","MB_Idx","MB_High","MB_Low"]] = data.apply(
         pattern.inside_bar,
         axis=1,
@@ -267,16 +262,29 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Levels"] = data.apply(
         indicator.levels, 
         axis=1, 
-        args=[["Iday_HClose","Iday_LClose"]])
+        args=[["Sig_High","Sig_Low"]])
 
     # level tested
-    data[["S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count"]] = data.apply(
+    data[["S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count","Min_Dist"]] = data.apply(
         indicator.level_tested,
         axis=1,
         args=[
             data["Levels"], data["Open"], data["High"],
             data["Low"], data["Close"]
         ],
+        result_type='expand'
+    )
+    # Max Retracement
+    data[["Max_H_Rtm","H_Rtm", "Max_L_Rtm", "L_Rtm"]] = data.apply(
+        indicator.level_retracement,
+        axis=1,
+        args=[data["High"], data["Low"], data["Iday_H_Idx"], data["Iday_L_Idx"]],
+        result_type='expand'
+    )
+    data[["DMB_H_Max_Rtm","DMB_H_Rtm", "DMB_L_Max_Rtm", "DMB_L_Rtm"]] = data.apply(
+        indicator.level_retracement,
+        axis=1,
+        args=[data["High"], data["Low"], data["DMB_H_Idx"], data["DMB_L_Idx"]],
         result_type='expand'
     )
 

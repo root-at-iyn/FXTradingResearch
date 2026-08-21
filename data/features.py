@@ -1,6 +1,7 @@
-from pandas import Series, DataFrame, DatetimeIndex, to_datetime, DateOffset, Timestamp
+from pandas import Series, DataFrame, DatetimeIndex, to_datetime, DateOffset, Timestamp, Index, IndexSlice
 from datetime import time
 from math import sqrt, atan, pi
+import numpy as np
 
 class Candle():
     """
@@ -66,9 +67,13 @@ class Intraday():
     def __init__(self) -> None:
         self.index_count = 0
         self.dhigh = 0
+        self.dhigh_idx = 0
         self.dlow = 0
+        self.dlow_idx = 0
         self.dhighest_close = 0
+        self.dhighest_close_idx = 0
         self.dlowest_close = 0
+        self.dlowest_close_idx = 0
 
     def index(self, df: Series, dt_index: DatetimeIndex, hr=16, min=45):
         """Returns the intraday index
@@ -94,40 +99,48 @@ class Intraday():
         
         if df["Iday_Idx"] == 0:
             self.dhigh = df["High"]
+            self.dhigh_idx = int(df["Idx"])
         elif df["High"] > self.dhigh:
             self.dhigh = df["High"]
+            self.dhigh_idx = int(df["Idx"])
     
-        return self.dhigh
+        return self.dhigh, self.dhigh_idx
 
     def highest_close(self, df: Series):
         """Returns the highest close of the intraday session"""
         
         if df["Iday_Idx"] == 0:
             self.dhighest_close = df["Close"]
+            self.dhighest_close_idx = int(df["Idx"])
         elif df["Close"] > self.dhighest_close:
             self.dhighest_close = df["Close"]
+            self.dhighest_close_idx = int(df["Idx"])
     
-        return self.dhighest_close
+        return self.dhighest_close, self.dhighest_close_idx
         
     def low(self, df: Series):
         """Returns the low of the intraday session"""
         
         if df["Iday_Idx"] == 0:
             self.dlow = df["Low"]
+            self.dlow_idx = int(df["Idx"])
         elif df["Low"] < self.dlow:
             self.dlow = df["Low"]
+            self.dlow_idx = int(df["Idx"])
     
-        return self.dlow
+        return self.dlow, self.dlow_idx
     
     def lowest_close(self, df: Series):
         """Returns the highest close of the intraday session"""
         
         if df["Iday_Idx"] == 0:
             self.dlowest_close = df["Close"]
+            self.dlowest_close_idx = int(df["Idx"])
         elif df["Close"] < self.dlowest_close:
             self.dlowest_close = df["Close"]
+            self.dlowest_close_idx = int(df["Idx"])
     
-        return self.dlowest_close
+        return self.dlowest_close, self.dlowest_close_idx
     
     def range(self, df: Series):
         """Returns the range of the intrday session"""
@@ -182,6 +195,8 @@ class Indicator():
         self.dmb_range_close = None
         self.dmb_range_hclose = None
         self.dmb_range_lclose = None
+        self.h_idx = None
+        self.l_idx = None
         # level test
         self.support_tested = {}
         self.resistance_tested = {}
@@ -611,7 +626,9 @@ class Indicator():
     def momentum(
             self, 
             df: Series,
-            sma: str,  
+            sma: str,
+            sma_slope: str,
+            slope_angle: int,
             atr: Series,
             velocity: Series,
             high: Series,
@@ -627,30 +644,34 @@ class Indicator():
         idx = int(df["Idx"])
         m = 0
         # Bullish Momentum
-        if velocity.iat[idx-1] < 0 and velocity.iat[idx] > 0 \
+        if velocity.iat[idx] > (velocity.iat[idx-1]) \
         and (velocity.iat[idx] + velocity.iat[idx-1]) > 0 \
-        and atr.iat[idx] > atr.iat[idx-1] \
+        and df["Range"] > atr.iat[idx] \
         and df["Close"] > df[sma] \
-        and df["Close"] > high.iat[idx-1]:
+        and df[sma_slope] > (slope_angle * 0.5) \
+        and df["Close"] > high.iat[idx-1] \
+        and df["Close_Pct_High"] < 0.34:
             self.bullish_momentum_count = 0
             m = 1
             self.bullish_momentum_count += 1
-        elif velocity.iat[idx] > 0 \
-        and atr.iat[idx] > atr.iat[idx-1] \
+        elif df["Close"] > df[sma] \
+        and df[sma_slope] > slope_angle \
         and self.bullish_momentum_count > 0:
             m = 1
             self.bullish_momentum_count += 1
         # Bearish Momentum
-        elif velocity.iat[idx-1] > 0 and velocity.iat[idx] < 0 \
+        elif (velocity.iat[idx] < velocity.iat[idx-1]) \
         and (velocity.iat[idx] + velocity.iat[idx-1]) < 0 \
-        and atr.iat[idx] > atr.iat[idx-1] \
+        and df["Range"] > atr.iat[idx] \
         and df["Close"] < df[sma] \
-        and df["Close"] < low.iat[idx-1]:
+        and df[sma_slope] < (-slope_angle * 0.5) \
+        and df["Close"] < low.iat[idx-1] \
+        and df["Close_Pct_High"] > 0.66:
             self.bearish_momentum_count = 0
             m = -1
             self.bearish_momentum_count += 1
-        elif velocity.iat[idx] < 0 \
-        and atr.iat[idx] > atr.iat[idx-1] \
+        elif df["Close"] < df[sma] \
+        and df[sma_slope] < -slope_angle \
         and self.bearish_momentum_count > 0:
             m = -1
             self.bearish_momentum_count += 1
@@ -719,6 +740,51 @@ class Indicator():
         price_levels = [df[col] for col in col_names]
         return price_levels
     
+    def level_retracement(
+            self, 
+            df: Series, 
+            high: Series, 
+            low: Series,
+            reference_high_idx: Series,
+            reference_low_idx: Series
+
+            ):
+        """Return the percentage price retraced from Iday_High and Iday_Low"""
+        idx = int(df["Idx"])
+        max_retrace_from_high = 0
+        retrace_from_high = 0
+        max_retrace_from_low = 0
+        retrace_from_low = 0
+        ref_high_idx = None
+        ref_low_at_high_idx = None
+        ref_low_idx = None
+        ref_high_at_low_idx = None
+
+        # Only set ref idx if value not NaN
+        if reference_high_idx.iat[idx] > -1:
+            ref_high_idx = int(reference_high_idx.iat[idx])
+        if ref_high_idx and reference_low_idx.iat[ref_high_idx] > -1:
+            ref_low_at_high_idx = int(reference_low_idx.iat[ref_high_idx])
+        if reference_low_idx.iat[idx] > -1:
+            ref_low_idx = int(reference_low_idx.iat[idx])
+        if ref_low_idx and reference_high_idx.iat[ref_low_idx] > -1:
+            ref_high_at_low_idx = int(reference_high_idx.iat[ref_low_idx])
+
+        # Only calc if all idx refs are not NaN
+        if ref_low_idx is not None and ref_high_idx is not None \
+            and ref_high_at_low_idx is not None and ref_low_at_high_idx is not None:
+            h_window =  high.iloc[ref_low_idx+1:idx+1]
+            l_window =  low.iloc[ref_high_idx+1:idx+1]
+            
+            if h_window.max() > 0:
+                max_retrace_from_low = (h_window.max() - low.iat[ref_low_idx]) / (high.iat[ref_high_at_low_idx] - low.iat[ref_low_idx])
+                retrace_from_low = (high.iat[idx] - low.iat[ref_low_idx]) / (high.iat[ref_high_at_low_idx] - low.iat[ref_low_idx])
+
+            if l_window.min() > 0:
+                max_retrace_from_high = (high.iat[ref_high_idx] - l_window.min()) / (high.iat[ref_high_idx] - low.iat[ref_low_at_high_idx])
+                retrace_from_high = (high.iat[ref_high_idx] - low.iat[idx]) / (high.iat[ref_high_idx] - low.iat[ref_low_at_high_idx])
+        return max_retrace_from_high, retrace_from_high, max_retrace_from_low, retrace_from_low
+    
     def level_tested(
             self, 
             df: Series, 
@@ -726,7 +792,8 @@ class Indicator():
             open: Series, 
             high: Series, 
             low: Series, 
-            close: Series
+            close: Series,
+            pct: int = 0.05
             ):
         """Returns if a price `level` was tested
 
@@ -739,6 +806,7 @@ class Indicator():
         r_test = False
         r_level = 0
         r_test_count = 0
+        min_distance = df["Iday_Range"] * pct
 
         if df["Iday_Idx"] == 0:
             self.support_tested = {}
@@ -756,7 +824,7 @@ class Indicator():
                     s_test_count = self.support_tested[level]
                     break
             # Single-bar Bullish Rejection
-                if open.iat[idx] > level and low.iat[idx] <= level \
+                if open.iat[idx] > level and low.iat[idx] < (level + min_distance) \
                 and close.iat[idx] > level:
                     if level not in self.support_tested.keys():
                         self.support_tested[level] = 0
@@ -776,7 +844,7 @@ class Indicator():
                     r_test_count = self.resistance_tested[level]
                     break
             # Single-bar Bearish Rejection
-                if open.iat[idx] < level and high.iat[idx] >= level \
+                if open.iat[idx] < level and high.iat[idx] > (level - min_distance) \
                 and close.iat[idx] < level:
                     if level not in self.resistance_tested.keys():
                         self.resistance_tested[level] = 0
@@ -787,7 +855,7 @@ class Indicator():
                     break
 
         # return data
-        return s_test, s_level, s_test_count, r_test, r_level, r_test_count
+        return s_test, s_level, s_test_count, r_test, r_level, r_test_count, min_distance
 
     def daily_inside_bar(
             self, 
@@ -797,7 +865,10 @@ class Indicator():
             yday_open: Series,
             yday_close: Series,
             yday_hclose: Series,
-            yday_lclose: Series
+            yday_lclose: Series,
+            iday_idx: Series,
+            iday_high: Series,
+            iday_low: Series
             ):
         """Return index of daily trading range"""
         inside_day = False
@@ -806,22 +877,47 @@ class Indicator():
             yday_open_close_max = max([df["Yday_Close"],df["Yday_Open"]])
             yday_open_close_min = min([df["Yday_Close"],df["Yday_Open"]])
             if self.dmb_range_high is None and self.dmb_range_low is None:
+                # Store Daily Mother Bar range and key levels
                 self.dmb_range_high = yday_high.iloc[idx-1]
                 self.dmb_range_low = yday_low.iloc[idx-1]
                 self.dmb_range_open = yday_open.iloc[idx-1]
                 self.dmb_range_close = yday_close.iloc[idx-1]
                 self.dmb_range_hclose = yday_hclose.iloc[idx-1]
                 self.dmb_range_lclose = yday_lclose.iloc[idx-1]
+                
+                # Use Iday Index to go 2 days back to Mother Bar day
+                yday_end_iday_idx = int(iday_idx.iat[idx-1])
+                yday_2_end_iday_idx = iday_idx.iat[(int(idx-2-yday_end_iday_idx))]
+                yday_2_start_idx = int(idx - 2 - yday_2_end_iday_idx - yday_end_iday_idx)
+                yday_2_end_idx = int(yday_2_start_idx + yday_2_end_iday_idx)
+                # Get highs for the day
+                h_window = iday_high.iloc[yday_2_start_idx: yday_2_end_idx]
+                # Get copy of np array with iday indexes for max high in the session 
+                dmbh_iday_idx_arr = np.where(h_window == h_window.max())[0].copy()
+                # Get index of max high first occurence 
+                self.h_idx = int(yday_2_start_idx + dmbh_iday_idx_arr[0])
+                
+                l_window = iday_low.iloc[yday_2_start_idx:yday_2_end_idx]
+                dmbl_iday_idx_arr = np.where(l_window == l_window.min())[0].copy()
+                self.l_idx = int(yday_2_start_idx + dmbl_iday_idx_arr[0])
+
             if self.dmb_range_high is not None and self.dmb_range_low is not None\
                 and yday_open_close_max < self.dmb_range_high and yday_open_close_min > self.dmb_range_low:
+                # If yday open and close within previous days high and low, then yday is an inside bar
                 pass
             else:
                 self.dmb_range_high = None 
                 self.dmb_range_low = None
+                self.dmb_range_open = None
+                self.dmb_range_close = None
+                self.dmb_range_hclose = None
+                self.dmb_range_lclose = None
+                self.h_idx = None
+                self.l_idx = None
         if self.dmb_range_high is not None and self.dmb_range_low is not None:
             inside_day = True
 
-        return inside_day
+        return inside_day, self.h_idx, self.dmb_range_high, self.l_idx, self.dmb_range_low
 
 class Pattern():
     """Class for custom chart patterns"""

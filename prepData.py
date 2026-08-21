@@ -152,26 +152,26 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         indicator.closes_gt_sma, axis=1, args=["SMA4"])
     data["Close_LT_SMA4"] = data.apply(
         indicator.closes_lt_sma, axis=1, args=["SMA4"])
-    # Bars Since SMA Crossed
-    data["BS_SMA_16_32_X"] = data.apply(
-        indicator.bars_since_sma_cross, 
-        axis=1, 
-        args=[data["SMA16"],data["SMA32"]]
-        )
-    # Momentum
-    data["Momentum"] = data.apply(
-        indicator.momentum,
-        axis=1,
-        args=["Close_GT_SMA4", "Close_LT_SMA4"],
-        period = 4
-    )
-    # Volatility Spike
+        # Volatility Spike
     data["Vol_Spike"] = data.apply(
         indicator.volatility_spike, 
         axis=1, 
         args=[data["ATR4"]],
         atr_multiplier = 2
         )
+    # Bars Since SMA Crossed
+    data["BS_SMA_16_32_X"] = data.apply(
+        indicator.bars_since_sma_cross, 
+        axis=1, 
+        args=[data["SMA16"],data["SMA32"]]
+        )
+    # Beginning of Day (BOD) Slope 
+    data["BOD_Slope_16"] = data.apply(
+        indicator.sma_slope_v2,
+        axis=1,
+        args=[data["SMA16"],data["Iday_Idx"]],
+        pipsize = pipsize
+    )
     # Slope Trend
     data["Trend_16_32"] = data.apply(
         indicator.slope_trend,
@@ -180,6 +180,22 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
               "SMA32_Slope_SMA", 11.25, 
               "BS_SMA_16_32_X"],
         period = 16
+    )
+    # Price Levels
+    data["Levels"] = data.apply(
+        indicator.levels, 
+        axis=1, 
+        args=[["Iday_HClose","Iday_LClose"]])
+
+    # level tested
+    data[["S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count","Min_Dist"]] = data.apply(
+        indicator.level_tested,
+        axis=1,
+        args=[
+            data["Levels"], data["Open"], data["High"],
+            data["Low"], data["Close"]
+        ],
+        result_type='expand'
     )
 
     # Patterns
@@ -284,20 +300,11 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
         args=[data["SMA16"],"SMA16_Slope",
               data["SMA32"],"SMA32_Slope"]
         )
-
-    # Inside bar
+    # Inside Bar
     data[["IB","MB_Idx","MB_High","MB_Low"]] = data.apply(
         pattern.inside_bar,
         axis=1,
         result_type='expand'
-        )
-
-    # Momentum
-    data["Bull_M"] = data.apply(
-        pattern.bullish_momentum, axis=1
-        )
-    data["Bear_M"] = data.apply(
-        pattern.bearish_momentum, axis=1
         )
 
     # Return all features
@@ -318,15 +325,16 @@ if __name__ == '__main__':
     data["Symbol"] = SYMBOL
      
     # show data
-    pd.options.display.max_rows = 100
+    pd.options.display.max_rows = 150
 
     base_cols = [
-        "Iday_Range","Yday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", 
-        "Trend_16_32", "Vol_Spike", "Momentum","BS_SMA_16_32_X"]
+        "Iday_Range","Yday_Range", "ADR", "Range", "ATR", "Body", "RSI_DVG", "RSI", "Close_Pct_SMA", 
+        "BOD_Slope_16", "S_Test", "S_Level","ST_Count","R_Test", "R_Level", "RT_Count"]
 
     # Print patterns
     # print(data['2025-03-11 17:15':'2025-03-12 16:45'][base_cols])
-    print(data[base_cols].tail(100))
+    # print(data[base_cols].tail(100))
+    print(data[base_cols].query("RSI_DVG == True and ((S_Test == True and ST_Count > 2) or (R_Test == True and RT_Count > 2))"))
 
     # WRITE TO CSV
     # output feature enhanced price data to csv
