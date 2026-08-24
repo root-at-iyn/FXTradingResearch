@@ -1,4 +1,4 @@
-from pandas import Series, DataFrame, DatetimeIndex, to_datetime, DateOffset, Timestamp, Index, IndexSlice
+from pandas import Series, DataFrame, DatetimeIndex, to_datetime, Timedelta, Timestamp, DateOffset
 from datetime import time
 from math import sqrt, atan, pi
 import numpy as np
@@ -203,6 +203,14 @@ class Indicator():
         # momentum
         self.bullish_momentum_count = 0
         self.bearish_momentum_count = 0
+        # fx sessions
+        self.today_fx_open = None
+        self.tokyo_high = 0
+        self.tokyo_low = 0
+        self.london_high = 0
+        self.london_low = 0
+        self.new_york_high = 0
+        self.new_york_low = 0
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -918,6 +926,89 @@ class Indicator():
             inside_day = True
 
         return inside_day, self.h_idx, self.dmb_range_high, self.l_idx, self.dmb_range_low
+
+    def fx_session_times(self) -> dict[str]:
+        """Returns the Global FX Trading Session times in EST
+
+        Use Case: pd.Series method `between_time`
+        """
+        session = {
+            "FX_Open": "17:15",
+            "FX_Close": "16:45",
+            "TYO_Open": "19:00",
+            "TYO_Close": "04:00",
+            "LDN_Open": "02:00",
+            "LDN_Close": "11:00",
+            "NY_Open": "07:00",
+            "NY_Close": "17:00",
+        }
+        overlap = {
+            "TYO_LDN_Open": session["LDN_Open"],
+            "TYO_LDN_Close": session["TYO_Close"],
+            "LDN_NY_Open": session["NY_Open"],
+            "LDN_NY_Close": session["LDN_Close"]
+        }
+        session.update(overlap)
+        return session
+    
+    def fx_sessions_today(self, df: Series):
+        """Returns the Timestamps of the start 
+        and end of current day's Global FX Sessions"""
+        session = {
+            "FX_Open": None,
+            "FX_Close": None,
+            "TYO_Open": None,
+            "TYO_Close": None,
+            "LDN_Open": None,
+            "LDN_Close": None,
+            "NY_Open": None,
+            "NY_Close": None,
+        }
+        ts = Timestamp(df.name)
+        if ts.hour == 17 and ts.minute == 15:
+            self.today_fx_open = ts
+
+        if self.today_fx_open:
+            session["FX_Open"] = self.today_fx_open # 17:15 EST
+            session["FX_Close"] = \
+                self.today_fx_open + Timedelta(hours=23,minutes=45) # 16:45 EST
+            session["TYO_Open"] = \
+                self.today_fx_open + Timedelta(hours=1,minutes=45) # 19:00 EST
+            session["TYO_Close"] = \
+                self.today_fx_open + Timedelta(hours=10, minutes=45) # 04:00 EST
+            session["LDN_Open"] = \
+                self.today_fx_open + Timedelta(hours=8, minutes=45) # 02:00 EST
+            session["LDN_Close"] = \
+                self.today_fx_open + Timedelta(hours=17, minutes=45) # 11:00 EST
+            session["NY_Open"] = \
+                self.today_fx_open + Timedelta(hours=13, minutes=45) # 07:00 EST
+            session["NY_Close"] = \
+                self.today_fx_open + Timedelta(hours=23,minutes=45) # 16:45 EST
+
+        return session
+
+    def fx_session_range(self, df: Series, high: Series, low: Series):
+        """Return the highest/lowest price (midpoint) for each FX Session"""
+        # Tokyo Session
+        if df.name > df["Session"]["TYO_Open"] \
+        and df.name < df["Session"]["TYO_Close"]:
+            self.tokyo_high = high.loc[df["Session"]["TYO_Open"]:df.name].max()
+            self.tokyo_low = low.loc[df["Session"]["TYO_Open"]:df.name].min()
+        # London Session
+        if df.name > df["Session"]["LDN_Open"] \
+        and df.name < df["Session"]["LDN_Close"]:
+            self.london_high = high.loc[df["Session"]["LDN_Open"]:df.name].max()
+            self.london_low = low.loc[df["Session"]["LDN_Open"]:df.name].min()
+        # New York Session
+        if df.name > df["Session"]["NY_Open"] \
+        and df.name < df["Session"]["NY_Close"]:
+            self.new_york_high = high.loc[df["Session"]["NY_Open"]:df.name].max()
+            self.new_york_low = low.loc[df["Session"]["NY_Open"]:df.name].min()
+        return \
+            self.tokyo_high, self.tokyo_low,\
+            self.london_high, self.london_low,\
+            self.new_york_high, self.new_york_low\
+            
 
 class Pattern():
     """Class for custom chart patterns"""
@@ -1640,3 +1731,18 @@ class Pattern():
             and df[slow_sma_slope] <= -22.5:
                 return True
 
+    def iday_range_breakout(self, df: Series, ib: Series, mbh: Series, mbl: Series):
+        """Return if price broke out from an intraday range"""
+        idx = int(df["Idx"])
+        bullish_range_bo = False 
+        bearish_range_bo = False
+        if ib.iat[idx-1] == True and ib.iat[idx] == False \
+        and self.range.iat[idx] > (mbh.iat[idx-1] - mbl.iat[idx-1]) * 1.5 \
+        and self.range.iat[idx] > df["ATR4"]:
+            if self.close.iat[idx] > mbh.iat[idx-1] \
+            and df["Close_Pct_High"] < 0.34:
+                bullish_range_bo = True
+            if self.close.iat[idx] < mbl.iat[idx-1] \
+            and df["Close_Pct_High"] > 0.66:
+                bearish_range_bo = True
+        return bullish_range_bo, bearish_range_bo

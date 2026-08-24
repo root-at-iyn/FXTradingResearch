@@ -183,6 +183,20 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         ],
         result_type='expand'
     )
+    # FX Session
+    data["Session"] = data.apply(
+        indicator.fx_sessions_today,
+        axis=1,
+    )
+    # FX Session Range
+    data[["TYO_High", "TYO_Low", 
+          "LDN_High", "LDN_Low", 
+          "NY_High", "NY_Low"]] = data.apply(
+        indicator.fx_session_range,
+        axis=1,
+        args=[data["High"],data["Low"]],
+        result_type='expand'
+    )
 
 
     # Patterns
@@ -274,7 +288,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         ],
         result_type='expand'
     )
-    # Max Retracement
+    # # Max Retracement
     data[["Max_H_Rtm","H_Rtm", "Max_L_Rtm", "L_Rtm"]] = data.apply(
         indicator.level_retracement,
         axis=1,
@@ -311,6 +325,13 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         pattern.bearish_momentum, axis=1,
         args=[data["ATR4"], "Close_LT_SMA4",4]
         )
+    # Range Breakout
+    data[["Bull_Range_BO", "Bear_Range_BO"]] = data.apply(
+        pattern.iday_range_breakout,
+        axis=1,
+        args=[data["IB"], data["MB_High"], data["MB_Low"]],
+        result_type='expand'
+    )
 
     # return data
     return data
