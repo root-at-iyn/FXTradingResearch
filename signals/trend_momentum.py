@@ -70,6 +70,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["SMA4"] = data.apply(indicator.SMA, axis=1, args=[4, data["Close"]])
     data["SMA16"] = data.apply(indicator.SMA, axis=1, args=[16, data["Close"]])
     data["SMA32"] = data.apply(indicator.SMA, axis=1, args=[32, data["Close"]])
+    data["SMA192"] = data.apply(indicator.SMA, axis=1, args=[192, data["Close"]])
     # Bollinger Bands
     data["BB_Upper_16_2"] = data.apply(
         indicator.bollinger_band_upper, 
@@ -83,7 +84,7 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         )
     # Price to SMA Percentage
     data["Close_Pct_SMA"] = data.apply(
-        indicator.pct_sma, axis=1, args=["SMA4", "Close"])
+        indicator.pct_sma, axis=1, args=["SMA16", "Close"])
     data["High_Pct_SMA"] = data.apply(
         indicator.pct_sma, axis=1, args=["SMA16", "High"])
     data["Low_Pct_SMA"] = data.apply(
@@ -111,12 +112,19 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         args=[data["SMA32"]],
         pipsize=pipsize
         )
+    data["SMA192_Slope"] = data.apply(
+        indicator.sma_slope, axis=1, 
+        args=[data["SMA192"]],
+        pipsize=pipsize
+        )
     data["SMA4_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
                                          args=[4, data["SMA4_Slope"]])
     data["SMA16_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
-                                         args=[16, data["SMA4_Slope"]])
+                                         args=[16, data["SMA16_Slope"]])
     data["SMA32_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
-                                         args=[32, data["SMA4_Slope"]])
+                                         args=[32, data["SMA32_Slope"]])
+    data["SMA192_Slope_SMA"] = data.apply(indicator.SMA, axis=1, 
+                                         args=[192, data["SMA192_Slope"]])
     # Significant Levels
     data["Sig_High"] = data.apply(
         indicator.significant_high, 
@@ -188,16 +196,20 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         indicator.fx_sessions_today,
         axis=1,
     )
-    # FX Session Range
+    # FX Session High / Low
     data[["TYO_High", "TYO_Low", 
           "LDN_High", "LDN_Low", 
           "NY_High", "NY_Low"]] = data.apply(
-        indicator.fx_session_range,
+        indicator.fx_session_high_low,
         axis=1,
         args=[data["High"],data["Low"]],
         result_type='expand'
     )
-
+    # FX Session Range
+    data["Session_Range"] = data.apply(
+        indicator.fx_session_range,
+        axis=1
+    )
 
     # Patterns
     pattern = Pattern(
@@ -251,6 +263,12 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         args=[data["ATR4"]],
         atr_multiplier = 2
         )
+    data["Dev_Spike"] = data.apply(
+        indicator.deviation_spike,
+        axis=1,
+        args=[data["ATR4"],data["High_Pct_SMA"],
+              data["Low_Pct_SMA"],data["Range"]]
+    )
     # Bars Since SMA Crossed
     data["BS_SMA_16_32_X"] = data.apply(
         indicator.bars_since_sma_cross, 
@@ -262,6 +280,18 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         args=[data["SMA16"],data["Iday_Idx"]],
         pipsize = pipsize
+    )
+    # Intraday SMA Cross Count
+    data["Iday_SMA_X"] = data.apply(
+        indicator.intraday_sma_cross_count, 
+        axis=1, 
+        args=[data["BS_SMA_16_32_X"]]
+        )
+    # Consolidation
+    data["Consolidation"] = data.apply(
+        indicator.consolidation,
+        axis=1,
+        args=[11.25, "SMA32_Slope_SMA","BOD_Slope_16"]
     )
     # Slope Trend
     data["Trend_16_32"] = data.apply(
@@ -299,6 +329,13 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         indicator.level_retracement,
         axis=1,
         args=[data["High"], data["Low"], data["DMB_H_Idx"], data["DMB_L_Idx"]],
+        result_type='expand'
+    )
+    # Session Break
+    data[["Brk_Sess_High","Brk_Sess_Low"]] = data.apply(
+        indicator.session_level_break,
+        axis=1,
+        args=[data["Close"]],
         result_type='expand'
     )
 

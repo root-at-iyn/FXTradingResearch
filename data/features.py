@@ -211,6 +211,9 @@ class Indicator():
         self.london_low = 0
         self.new_york_high = 0
         self.new_york_low = 0
+        # Session Breakout
+        self.bullish_breakout = None
+        self.bearish_breakout = None
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -626,6 +629,21 @@ class Indicator():
             self.sma_not_crossed +=1
         return self.sma_not_crossed
 
+    def intraday_sma_cross_count(
+            self, 
+            df:Series, 
+            bars_since_sma_cross: Series
+            ):
+        """Returns the number of times the SMA pairs 
+        have crossed in the intraday session"""
+        sma_cross_count = 0
+        if df.name < df["Session"]["FX_Close"]:
+            today_bs_sma_x = \
+                bars_since_sma_cross.loc[df["Session"]["FX_Open"]:df.name]
+            sma_cross_count = today_bs_sma_x[today_bs_sma_x == 0].count()
+            return sma_cross_count
+
+
     def velocity(self, df: Series, price_point: Series, period: int, pipsize: float):
         """Returns the velocity of price movement over time"""
         idx = int(df["Idx"])
@@ -696,6 +714,37 @@ class Indicator():
             return True
         else:
             return False
+        
+    def deviation_spike(
+            self, 
+            df: Series, 
+            atr: Series, 
+            high_pct_sma: Series, 
+            low_pct_sma: Series,
+            bar_range: Series
+            ):
+        """Return where the current bar's high or low 
+        has a sudden extreme deviation away from the SMA"""
+        idx = df["Idx"]
+        deviation_spike = 0
+        # Deviation Spike Up
+        if high_pct_sma.iat[idx] > 0.09 \
+        and df["Close_Pct_SMA"] > 0.075 \
+        and df["Close_Pct_High"] < 0.34 \
+        and df["Close"] > df["BB_Upper_16_2"] \
+        and df["Range"] > atr.iat[idx] * 1.5:
+            deviation_spike = 1
+        # Deviation Spike Down
+        elif low_pct_sma.iat[idx] > 0.09 \
+        and df["Close_Pct_SMA"] > 0.075 \
+        and df["Close_Pct_High"] > 0.66 \
+        and df["Close"] < df["BB_Lower_16_2"] \
+        and df["Range"] > atr.iat[idx] * 1.5:
+            deviation_spike = -1
+        else:
+            deviation_spike = 0
+        return deviation_spike
+
         
     def slope_trend(
             self, 
@@ -864,6 +913,66 @@ class Indicator():
 
         # return data
         return s_test, s_level, s_test_count, r_test, r_level, r_test_count, min_distance
+    
+    def session_level_break(
+        self, 
+        df: Series, 
+        close: Series
+        ):
+        """Return if price broke out from a session level"""
+        idx = df["Idx"]
+        current_time = df.name
+        # Tokyo Session
+        if current_time >= df["Session"]["TYO_Open"] \
+        and current_time < df["Session"]["LDN_Open"]:
+            if df.name == df["Session"]["TYO_Open"]:
+                self.bullish_breakout = None
+                self.bearish_breakout = None
+            # bullish break out
+            if close.iat[idx-1] <= df["NY_High"] \
+            and close.iat[idx] > df["NY_High"]:
+                if self.bullish_breakout is None:
+                    self.bullish_breakout = {df["NY_High"]:current_time}
+            # bearish break out
+            if close.iat[idx-1] >= df["NY_Low"] \
+            and close.iat[idx] < df["NY_Low"]:
+                if self.bearish_breakout is None:
+                    self.bearish_breakout = {df["NY_Low"]:current_time}
+        # London Session
+        if current_time >= df["Session"]["LDN_Open"] \
+        and current_time < df["Session"]["NY_Open"]:
+            if df.name == df["Session"]["LDN_Open"]:
+                self.bullish_breakout = None
+                self.bearish_breakout = None
+            # bullish break out
+            if close.iat[idx-1] <= df["TYO_High"] \
+            and close.iat[idx] > df["TYO_High"]:
+                if self.bullish_breakout is None:
+                    self.bullish_breakout = {df["TYO_High"]:current_time}
+            # bearish break out
+            if close.iat[idx-1] >= df["TYO_Low"] \
+            and close.iat[idx] < df["TYO_Low"]:
+                if self.bearish_breakout is None:
+                    self.bearish_breakout = {df["TYO_Low"]:current_time}
+        # New York Session
+        if current_time >= df["Session"]["NY_Open"] \
+        and current_time < df["Session"]["NY_Close"]:
+            if df.name == df["Session"]["NY_Open"]:
+                self.bullish_breakout = None
+                self.bearish_breakout = None
+            # bullish break out
+            if close.iat[idx-1] <= df["LDN_High"] \
+            and close.iat[idx] > df["LDN_High"]:
+                if self.bullish_breakout is None:
+                    self.bullish_breakout = {df["LDN_High"]:current_time}
+            # bearish break out
+            if close.iat[idx-1] >= df["LDN_Low"] \
+            and close.iat[idx] < df["LDN_Low"]:
+                if self.bearish_breakout is None:
+                    self.bearish_breakout = {df["LDN_Low"]:current_time}
+
+        return self.bullish_breakout, self.bearish_breakout
+
 
     def daily_inside_bar(
             self, 
@@ -927,30 +1036,25 @@ class Indicator():
 
         return inside_day, self.h_idx, self.dmb_range_high, self.l_idx, self.dmb_range_low
 
-    def fx_session_times(self) -> dict[str]:
-        """Returns the Global FX Trading Session times in EST
-
-        Use Case: pd.Series method `between_time`
-        """
-        session = {
-            "FX_Open": "17:15",
-            "FX_Close": "16:45",
-            "TYO_Open": "19:00",
-            "TYO_Close": "04:00",
-            "LDN_Open": "02:00",
-            "LDN_Close": "11:00",
-            "NY_Open": "07:00",
-            "NY_Close": "17:00",
-        }
-        overlap = {
-            "TYO_LDN_Open": session["LDN_Open"],
-            "TYO_LDN_Close": session["TYO_Close"],
-            "LDN_NY_Open": session["NY_Open"],
-            "LDN_NY_Close": session["LDN_Close"]
-        }
-        session.update(overlap)
-        return session
-    
+    def consolidation(
+            self, 
+            df: Series, 
+            slope_angle_threshold: int,
+            slow_sma_slope_sma: str,
+            bod_sma_slope: str
+            ):
+        """Returns where current price action has no trend"""
+        idx = df["Idx"]
+        slope_angles = [
+            df[slow_sma_slope_sma],
+            df[bod_sma_slope] 
+            ]
+        if max(slope_angles) < slope_angle_threshold \
+        and min(slope_angles) > -slope_angle_threshold:
+            return True
+        else:
+            return False
+       
     def fx_sessions_today(self, df: Series):
         """Returns the Timestamps of the start 
         and end of current day's Global FX Sessions"""
@@ -971,7 +1075,7 @@ class Indicator():
         if self.today_fx_open:
             session["FX_Open"] = self.today_fx_open # 17:15 EST
             session["FX_Close"] = \
-                self.today_fx_open + Timedelta(hours=23,minutes=45) # 16:45 EST
+                self.today_fx_open + Timedelta(hours=23,minutes=45) # 17:00 EST
             session["TYO_Open"] = \
                 self.today_fx_open + Timedelta(hours=1,minutes=45) # 19:00 EST
             session["TYO_Close"] = \
@@ -983,24 +1087,24 @@ class Indicator():
             session["NY_Open"] = \
                 self.today_fx_open + Timedelta(hours=13, minutes=45) # 07:00 EST
             session["NY_Close"] = \
-                self.today_fx_open + Timedelta(hours=23,minutes=45) # 16:45 EST
+                self.today_fx_open + Timedelta(hours=23,minutes=45) # 17:00 EST
 
         return session
 
-    def fx_session_range(self, df: Series, high: Series, low: Series):
+    def fx_session_high_low(self, df: Series, high: Series, low: Series):
         """Return the highest/lowest price (midpoint) for each FX Session"""
         # Tokyo Session
-        if df.name > df["Session"]["TYO_Open"] \
-        and df.name < df["Session"]["TYO_Close"]:
+        if df.name >= df["Session"]["TYO_Open"] \
+        and df.name < df["Session"]["LDN_Open"]:
             self.tokyo_high = high.loc[df["Session"]["TYO_Open"]:df.name].max()
             self.tokyo_low = low.loc[df["Session"]["TYO_Open"]:df.name].min()
         # London Session
-        if df.name > df["Session"]["LDN_Open"] \
-        and df.name < df["Session"]["LDN_Close"]:
+        if df.name >= df["Session"]["LDN_Open"] \
+        and df.name < df["Session"]["NY_Open"]:
             self.london_high = high.loc[df["Session"]["LDN_Open"]:df.name].max()
             self.london_low = low.loc[df["Session"]["LDN_Open"]:df.name].min()
         # New York Session
-        if df.name > df["Session"]["NY_Open"] \
+        if df.name >= df["Session"]["NY_Open"] \
         and df.name < df["Session"]["NY_Close"]:
             self.new_york_high = high.loc[df["Session"]["NY_Open"]:df.name].max()
             self.new_york_low = low.loc[df["Session"]["NY_Open"]:df.name].min()
@@ -1008,6 +1112,28 @@ class Indicator():
             self.tokyo_high, self.tokyo_low,\
             self.london_high, self.london_low,\
             self.new_york_high, self.new_york_low\
+
+    def fx_session_range(self, df: Series):
+        """Returns whether price is trading in an FX Session's range"""
+        is_range_bound = False
+        current_time = df.name
+
+        if current_time >= df["Session"]["TYO_Open"] \
+        and current_time < df["Session"]["LDN_Open"]:
+            if df["Close"] <= df["NY_High"] \
+            and df["Close"] >= df["NY_Low"]:
+                is_range_bound = True
+        elif current_time >= df["Session"]["LDN_Open"] \
+        and current_time < df["Session"]["NY_Open"]:
+            if df["Close"] <= df["TYO_High"] \
+            and df["Close"] >= df["TYO_Low"]:
+                is_range_bound = True
+        elif current_time >= df["Session"]["NY_Open"] \
+        and current_time < df["Session"]["NY_Close"]:
+            if df["Close"] <= df["LDN_High"] \
+            and df["Close"] >= df["LDN_Low"]:
+                is_range_bound = True
+        return is_range_bound
             
 
 class Pattern():
