@@ -84,7 +84,8 @@ if __name__ == '__main__':
     pd.options.display.precision = 6
     cols = ["ATR4", "Range","ADR",
             "D_IB","Dev_Spike","Consolidation",
-            "Iday_SMA_X","Session_Range","Brk_Sess_High","Brk_Sess_Low"]
+            "Iday_SMA_X","Session_Range",
+            "SBO","SBO_Level","SBO_TS","SBO_Confirmed","SBO_Failed"]
 
    # "Max_L_Rtm > 1.61 and H_Rtm > 0.618 and SMA16 > SMA32 and BOD_Slope_16 > 11.25 and SMA32_Slope > 5"
     # .query("(Dev_Spike == 1 or Dev_Spike == -1) and Consolidation == 1")

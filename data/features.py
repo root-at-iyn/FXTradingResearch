@@ -212,8 +212,11 @@ class Indicator():
         self.new_york_high = 0
         self.new_york_low = 0
         # Session Breakout
-        self.bullish_breakout = None
-        self.bearish_breakout = None
+        self.session_breakout = 0
+        self.session_level = 0
+        self.session_breakout_timestamp = None 
+        self.session_breakout_confirmed = False
+        self.session_breakout_failed = False
 
     def yesterday_high(self, df: Series):
         """Return the high of yesterday's session"""
@@ -914,65 +917,97 @@ class Indicator():
         # return data
         return s_test, s_level, s_test_count, r_test, r_level, r_test_count, min_distance
     
-    def session_level_break(
+    def fx_session_breakout(
         self, 
         df: Series, 
+        high: Series,
+        low: Series,
         close: Series
         ):
-        """Return if price broke out from a session level"""
+        """Return if price broke out from a session level
+        
+        start: The string name of an FX Session key, e.g. `LDN_Open`
+        end: The string name of an FX Session key, e.g. `NY_Close`
+        """
         idx = df["Idx"]
         current_time = df.name
-        # Tokyo Session
+        session_start = None
+        session_end = None
+        session_high = None
+        session_low = None
+        td = Timedelta(minutes=15)
+        # Session Window
         if current_time >= df["Session"]["TYO_Open"] \
         and current_time < df["Session"]["LDN_Open"]:
-            if df.name == df["Session"]["TYO_Open"]:
-                self.bullish_breakout = None
-                self.bearish_breakout = None
-            # bullish break out
-            if close.iat[idx-1] <= df["NY_High"] \
-            and close.iat[idx] > df["NY_High"]:
-                if self.bullish_breakout is None:
-                    self.bullish_breakout = {df["NY_High"]:current_time}
-            # bearish break out
-            if close.iat[idx-1] >= df["NY_Low"] \
-            and close.iat[idx] < df["NY_Low"]:
-                if self.bearish_breakout is None:
-                    self.bearish_breakout = {df["NY_Low"]:current_time}
-        # London Session
+            session_start = df["Session"]["TYO_Open"]
+            session_end = df["Session"]["LDN_Open"]
+            session_high = df["NY_High"]
+            session_low = df["NY_Low"]
         if current_time >= df["Session"]["LDN_Open"] \
         and current_time < df["Session"]["NY_Open"]:
-            if df.name == df["Session"]["LDN_Open"]:
-                self.bullish_breakout = None
-                self.bearish_breakout = None
-            # bullish break out
-            if close.iat[idx-1] <= df["TYO_High"] \
-            and close.iat[idx] > df["TYO_High"]:
-                if self.bullish_breakout is None:
-                    self.bullish_breakout = {df["TYO_High"]:current_time}
-            # bearish break out
-            if close.iat[idx-1] >= df["TYO_Low"] \
-            and close.iat[idx] < df["TYO_Low"]:
-                if self.bearish_breakout is None:
-                    self.bearish_breakout = {df["TYO_Low"]:current_time}
-        # New York Session
+            session_start = df["Session"]["LDN_Open"]
+            session_end = df["Session"]["NY_Open"]
+            session_high = df["TYO_High"]
+            session_low = df["TYO_Low"]
         if current_time >= df["Session"]["NY_Open"] \
-        and current_time < df["Session"]["NY_Close"]:
-            if df.name == df["Session"]["NY_Open"]:
-                self.bullish_breakout = None
-                self.bearish_breakout = None
-            # bullish break out
-            if close.iat[idx-1] <= df["LDN_High"] \
-            and close.iat[idx] > df["LDN_High"]:
-                if self.bullish_breakout is None:
-                    self.bullish_breakout = {df["LDN_High"]:current_time}
-            # bearish break out
-            if close.iat[idx-1] >= df["LDN_Low"] \
-            and close.iat[idx] < df["LDN_Low"]:
-                if self.bearish_breakout is None:
-                    self.bearish_breakout = {df["LDN_Low"]:current_time}
+        and current_time < (df["Session"]["NY_Close"] + td):
+            session_start = df["Session"]["NY_Open"]
+            session_end = df["Session"]["NY_Close"] + td
+            session_high = df["LDN_High"]
+            session_low = df["LDN_Low"]
+        # Current FX Session
+        if session_start is not None:
+            if current_time >= session_start \
+            and current_time < session_end:
+                if df.name == session_start:
+                    self.session_breakout = 0
+                    self.session_level = 0
+                    self.session_breakout_timestamp = None 
+                    self.session_breakout_confirmed = False
+                    self.session_breakout_failed = False
+                # Bullish BO
+                if close.iat[idx-1] <= session_high \
+                and close.iat[idx] > session_high:
+                    if self.session_breakout != 1:
+                        self.session_breakout = 1
+                        self.session_level = session_high
+                        self.session_breakout_timestamp = current_time
+                        self.session_breakout_confirmed = False
+                        self.session_breakout_failed = False
+                if self.session_breakout == 1:
+                    # Bullish BO Confirmed 
+                    if self.session_breakout_confirmed is False \
+                    and self.session_breakout_failed is False \
+                    and df["Close"] > high.loc[self.session_breakout_timestamp]:
+                        self.session_breakout_confirmed = True
+                    # Bullish BO Failed
+                    if self.session_breakout_failed is False \
+                    and df["Close"] < session_high:
+                        self.session_breakout_failed = True # sell at breakout high
+                # Bearish BO
+                if close.iat[idx-1] >= session_low \
+                and close.iat[idx] < session_low:
+                    if self.session_breakout != -1:
+                        self.session_breakout = -1
+                        self.session_level = session_low
+                        self.session_breakout_timestamp = current_time
+                        self.session_breakout_confirmed = False
+                        self.session_breakout_failed = False
+                if self.session_breakout_failed == -1:
+                    # Bearish BO Confirmed
+                    if self.session_breakout_confirmed is False \
+                    and self.session_breakout_failed is False \
+                    and df["Close"] < low.loc[self.session_breakout_timestamp]:
+                        self.session_breakout_confirmed = True
+                    if self.session_breakout_failed is False \
+                    and df["Close"] > session_low:
+                        self.session_breakout_failed = True # buy and breakout low
 
-        return self.bullish_breakout, self.bearish_breakout
-
+        return \
+        self.session_breakout, self.session_level, \
+        self.session_breakout_timestamp, \
+        self.session_breakout_confirmed, \
+        self.session_breakout_failed 
 
     def daily_inside_bar(
             self, 

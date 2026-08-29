@@ -332,10 +332,10 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         result_type='expand'
     )
     # Session Break
-    data[["Brk_Sess_High","Brk_Sess_Low"]] = data.apply(
-        indicator.session_level_break,
+    data[["SBO","SBO_Level","SBO_TS","SBO_Confirmed","SBO_Failed"]] = data.apply(
+        indicator.fx_session_breakout,
         axis=1,
-        args=[data["Close"]],
+        args=[data["High"],data["Low"],data["Close"]],
         result_type='expand'
     )
 
