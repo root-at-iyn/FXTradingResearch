@@ -3,65 +3,6 @@ from datetime import time
 from math import sqrt, atan, pi
 import numpy as np
 
-class Candle():
-    """
-    Class to return the properties of a time period derived from the OHLC
-
-    Takes a Pandas Series of `OHLC` data, and returns the calculated 
-    properties of the period (represented as candlestick on the chart). 
-    This is designed to work with the pandas.apply() method and should set 
-    `axis=1` to receive a series and apply to the column.
-    """
-
-    def __init__(self) -> None:
-        pass 
-
-    def body(self, df: Series) -> Series:
-        """Returns the body of the candlestick"""
-
-        return abs(df["Open"] - df["Close"])
-    
-    def range(self, df:Series) -> Series:
-        """Returns the range of the candlestick"""
-
-        return (df["High"] - df["Low"])
-    
-    def upper_wick(self, df: Series) -> Series:
-        """Returns the upper wick of the candlestick"""
-
-        if df["Close"] >= df["Open"]:
-            wick = df["High"] - df["Close"]
-        else:
-            wick = df["High"] - df["Open"]
-        
-        return wick
-    
-    def lower_wick(self, df: Series) -> Series:
-        """Returns the lower wick of the candlestick"""
-
-        if df["Close"] <= df["Open"]:
-            wick = df["Close"] - df["Low"]
-        else:
-            wick = df["Open"] - df["Low"]
-        
-        return wick
-
-    def close_pct_high(self, df: Series):
-        """Return the percentage of the candle's Close from the High"""
-
-        if df["Range"] == 0:
-            return df["Range"]
-        else:
-            return (df["High"] - df["Close"]) / df["Range"]
-
-    def open_pct_high(self, df: Series):
-        """Return the percentage of the candle's Open from the High"""
-
-        if df["Range"] == 0:
-            return df["Range"]
-        else:
-            return (df["High"] - df["Open"]) / df["Range"]
-
 
 class Intraday():
     def __init__(self) -> None:

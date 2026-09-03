@@ -1,5 +1,6 @@
 import pandas as pd
-from data.features import Candle, Intraday, Indicator, Pattern
+from data.features import Intraday, Indicator, Pattern
+from data.candle import Candle
 
 
 def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
@@ -11,16 +12,10 @@ def apply_features(data: pd.DataFrame, pipsize: float = 0.0001):
     data = data.tz_convert("US/Eastern")
 
     # set row index
-    data["Idx"] = data.apply(lambda x: data.index.get_loc(x.name), axis=1)
+    data["Idx"] = df.index.argsort()
     
     # candle properties
-    candle = Candle()
-    data["Body"] = data.apply(candle.body, axis=1)
-    data["Range"] = data.apply(candle.range, axis=1)
-    data["UWick"] = data.apply(candle.upper_wick, axis=1)
-    data["LWick"] = data.apply(candle.lower_wick, axis=1)
-    data["Close_Pct_High"] = data.apply(candle.close_pct_high, axis=1)
-    data["Open_Pct_High"] = data.apply(candle.open_pct_high, axis=1)
+    data = Candle().vectorised_apply(data)
     
     # intraday properties
     intraday = Intraday()

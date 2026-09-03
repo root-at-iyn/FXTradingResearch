@@ -89,4 +89,4 @@ if __name__ == '__main__':
 
 
     print(data[cols].tail(100),"\n")
-    data.to_csv(f"./research/price_data/FE_latest.csv")
+    # data.to_csv(f"./research/price_data/FE_latest.csv")
