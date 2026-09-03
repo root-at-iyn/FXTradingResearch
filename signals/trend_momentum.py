@@ -226,6 +226,18 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
     data["Bull_Pinbar"] = data.apply(pattern.bullish_pinbar, axis=1)
     data["Shooting_Star"] = data.apply(pattern.shooting_star, axis=1)
     data["Bear_Pinbar"] = data.apply(pattern.bearish_pinbar, axis=1)
+    # Bullish Bollinger Band Reversals
+    data["Bull_BBR_C1"] = data.apply(
+        pattern.bullish_bb_reversal_c1,
+        axis=1,
+        args=[data["BB_Lower_16_2"]]
+    )
+    # Bearish Bollinger Band Reversals
+    data["Bear_BBR_C1"] = data.apply(
+        pattern.bearish_bb_reversal_c1,
+        axis=1,
+        args=[data["BB_Upper_16_2"]]
+    )
 
     data[["Bull_TC", "Bear_TC"]] = data.apply(
         pattern.trend_continuation, 
@@ -307,6 +319,11 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         indicator.levels, 
         axis=1, 
         args=[["Sig_High","Sig_Low"]])
+    # Session Levels
+    data["Session_Levels"] = data.apply(
+        indicator.levels, 
+        axis=1, 
+        args=[["NY_High","NY_Low","LDN_High","LDN_Low","TYO_High","TYO_Low"]])
 
     # level tested
     data[["S_Test","S_Level","ST_Count","R_Test","R_Level","RT_Count","Min_Dist"]] = data.apply(
@@ -316,8 +333,10 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
             data["Levels"], data["Open"], data["High"],
             data["Low"], data["Close"]
         ],
-        result_type='expand'
+        result_type='expand',
+        pct = 0
     )
+
     # # Max Retracement
     data[["Max_H_Rtm","H_Rtm", "Max_L_Rtm", "L_Rtm"]] = data.apply(
         indicator.level_retracement,
@@ -332,10 +351,11 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         result_type='expand'
     )
     # Session Break
-    data[["SBO","SBO_Level","SBO_TS","SBO_Confirmed","SBO_Failed"]] = data.apply(
+    data[["SLB","SBO","SBO_Level","SBO_TS",
+          "SBO_Confirmed","SBO_Failed"]] = data.apply(
         indicator.fx_session_breakout,
         axis=1,
-        args=[data["High"],data["Low"],data["Close"]],
+        args=[data["Open"],data["High"],data["Low"],data["Close"],data["Body"]],
         result_type='expand'
     )
 
@@ -368,6 +388,30 @@ def apply_trend_momentum(data: pd.DataFrame, pipsize: float = 0.0001) -> pd.Data
         axis=1,
         args=[data["IB"], data["MB_High"], data["MB_Low"]],
         result_type='expand'
+    )
+    # Session Level Break Signal
+    data["SLB_Signal"] = data.apply(
+        pattern.session_level_break_signal,
+        axis=1,
+        args=[data["SLB"]]
+    )
+    # Session Breakout Signal
+    data["SBO_Signal"] = data.apply(
+        pattern.session_breakout_signal, 
+        axis=1, 
+        args=[data["SBO_TS"]]
+        )
+    # Session Breakout Failed Signal
+    data["SBO_Fail_Signal"] = data.apply(
+        pattern.session_breakout_failed_signal,
+        axis=1,
+        args=[data["SBO_Failed"]]
+    )
+    # Session False Breakout Reversal
+    data["SFBO_Reversal"] = data.apply(
+        pattern.session_false_breakout_reversal,
+        axis=1,
+        args=[data["SLB_Signal"]]
     )
 
     # return data

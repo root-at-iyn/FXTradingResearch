@@ -82,13 +82,11 @@ if __name__ == '__main__':
     # show data
     pd.options.display.max_rows = 100
     pd.options.display.precision = 6
-    cols = ["ATR4", "Range","ADR",
-            "D_IB","Dev_Spike","Consolidation",
-            "Iday_SMA_X","Session_Range",
-            "SBO","SBO_Level","SBO_TS","SBO_Confirmed","SBO_Failed"]
+    cols = ["Symbol","ATR4", "Range","Body","ADR",
+            "D_IB","SLB","SBO","SBO_Level","SBO_TS",
+            "SBO_Signal","SLB_Signal","SFBO_Reversal"
+            ]
 
-   # "Max_L_Rtm > 1.61 and H_Rtm > 0.618 and SMA16 > SMA32 and BOD_Slope_16 > 11.25 and SMA32_Slope > 5"
-    # .query("(Dev_Spike == 1 or Dev_Spike == -1) and Consolidation == 1")
+
     print(data[cols].tail(100),"\n")
     data.to_csv(f"./research/price_data/FE_latest.csv")
-    # print(data[trade_entry].tail(1))

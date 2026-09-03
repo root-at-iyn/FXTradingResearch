@@ -1,4 +1,4 @@
-from pandas import Series, DataFrame, DatetimeIndex, to_datetime, Timedelta, Timestamp, DateOffset
+from pandas import Series, DataFrame, DatetimeIndex, to_datetime, Timedelta, Timestamp, DateOffset, NaT
 from datetime import time
 from math import sqrt, atan, pi
 import numpy as np
@@ -212,6 +212,9 @@ class Indicator():
         self.new_york_high = 0
         self.new_york_low = 0
         # Session Breakout
+        self.session_level_break = NaT
+        self.session_level_break_h = 0
+        self.session_level_break_l = 0
         self.session_breakout = 0
         self.session_level = 0
         self.session_breakout_timestamp = None 
@@ -919,10 +922,12 @@ class Indicator():
     
     def fx_session_breakout(
         self, 
-        df: Series, 
+        df: Series,
+        open: Series, 
         high: Series,
         low: Series,
-        close: Series
+        close: Series,
+        body: Series
         ):
         """Return if price broke out from a session level
         
@@ -960,6 +965,9 @@ class Indicator():
             if current_time >= session_start \
             and current_time < session_end:
                 if df.name == session_start:
+                    self.session_level_break = NaT
+                    self.session_level_break_h = 0
+                    self.session_level_break_l = 0
                     self.session_breakout = 0
                     self.session_level = 0
                     self.session_breakout_timestamp = None 
@@ -968,12 +976,19 @@ class Indicator():
                 # Bullish BO
                 if close.iat[idx-1] <= session_high \
                 and close.iat[idx] > session_high:
-                    if self.session_breakout != 1:
-                        self.session_breakout = 1
-                        self.session_level = session_high
-                        self.session_breakout_timestamp = current_time
-                        self.session_breakout_confirmed = False
-                        self.session_breakout_failed = False
+                    if self.session_level_break_h != session_high:
+                        self.session_level_break = current_time
+                        self.session_level_break_h = session_high
+                        self.session_level = self.session_level_break_h
+                        self.session_breakout = 2
+                    if body.iat[idx] > 2 * body.iat[idx-1] \
+                    and df["Range"] > df["ATR4"] * 1.5:
+                        if self.session_breakout != 1:
+                            self.session_breakout = 1
+                            self.session_level = session_high
+                            self.session_breakout_timestamp = current_time
+                            self.session_breakout_confirmed = False
+                            self.session_breakout_failed = False
                 if self.session_breakout == 1:
                     # Bullish BO Confirmed 
                     if self.session_breakout_confirmed is False \
@@ -982,28 +997,39 @@ class Indicator():
                         self.session_breakout_confirmed = True
                     # Bullish BO Failed
                     if self.session_breakout_failed is False \
-                    and df["Close"] < session_high:
-                        self.session_breakout_failed = True # sell at breakout high
+                    and df["Close"] < session_high \
+                    and df["Close"] < open.loc[self.session_breakout_timestamp]:
+                        self.session_breakout_failed = True
                 # Bearish BO
                 if close.iat[idx-1] >= session_low \
                 and close.iat[idx] < session_low:
-                    if self.session_breakout != -1:
-                        self.session_breakout = -1
-                        self.session_level = session_low
-                        self.session_breakout_timestamp = current_time
-                        self.session_breakout_confirmed = False
-                        self.session_breakout_failed = False
-                if self.session_breakout_failed == -1:
+                    if self.session_level_break_l != session_low:
+                        self.session_level_break = current_time
+                        self.session_level_break_l = session_low
+                        self.session_level = self.session_level_break_l
+                        self.session_breakout = -2
+                    if body.iat[idx] > 2 * body.iat[idx-1] \
+                    and df["Range"] > df["ATR4"] * 1.5:
+                        if self.session_breakout != -1:
+                            self.session_breakout = -1
+                            self.session_level = session_low
+                            self.session_breakout_timestamp = current_time
+                            self.session_breakout_confirmed = False
+                            self.session_breakout_failed = False
+                if self.session_breakout == -1:
                     # Bearish BO Confirmed
                     if self.session_breakout_confirmed is False \
                     and self.session_breakout_failed is False \
                     and df["Close"] < low.loc[self.session_breakout_timestamp]:
                         self.session_breakout_confirmed = True
+                    # Bearish BO Failed
                     if self.session_breakout_failed is False \
-                    and df["Close"] > session_low:
-                        self.session_breakout_failed = True # buy and breakout low
+                    and df["Close"] > session_low \
+                    and df["Close"] > open.loc[self.session_breakout_timestamp]:
+                        self.session_breakout_failed = True
 
         return \
+        self.session_level_break, \
         self.session_breakout, self.session_level, \
         self.session_breakout_timestamp, \
         self.session_breakout_confirmed, \
@@ -1907,3 +1933,75 @@ class Pattern():
             and df["Close_Pct_High"] > 0.66:
                 bearish_range_bo = True
         return bullish_range_bo, bearish_range_bo
+    
+    def session_level_break_signal(self, df: Series, slb: Series):
+        idx = df["Idx"]
+        if slb.iat[idx] is not NaT \
+        and slb.iat[idx] != slb.iat[idx-1] \
+        and slb.iat[idx] != df["SBO_TS"]:
+            return True
+        else:
+            return False
+    
+    def session_breakout_signal(self, df: Series, sbo_ts: Series):
+        idx = df["Idx"]
+        if sbo_ts.iat[idx] is not None \
+        and sbo_ts.iat[idx] > sbo_ts.iat[idx-1]:
+            return True
+        if sbo_ts.iat[idx-1] is NaT \
+        and sbo_ts.iat[idx] is not NaT:
+            return True
+        else:
+            return False
+
+    def session_breakout_failed_signal(self, df: Series, sbo_failed: Series):
+        idx = df["Idx"]
+        if sbo_failed.iat[idx-1] == False \
+        and sbo_failed.iat[idx] == True:
+            return True
+        else:
+            return False
+        
+    def session_false_breakout_reversal(self, df: Series, slb_signal: Series):
+        """Return whether false breakout has become a reversal signal"""
+        idx = df["Idx"]
+        if slb_signal.iat[idx-1] == True:
+            # bullish reversal
+            if self.close.iat[idx-1] < df["SBO_Level"] \
+            and self.close.iat[idx] > self.open.iat[idx-1]:
+                return 1
+            elif self.close.iat[idx-1] > df["SBO_Level"] \
+            and self.close.iat[idx] < self.open.iat[idx-1]:
+                return -1
+            else:
+                return 0
+        elif df["SLB"] is not NaT and df["SBO_TS"] is NaT:
+            # bullish
+            if self.open.iat[idx] < df["SBO_Level"] \
+            and df["SBO"] == -2 \
+            and df["Bull_BBR_C1"] == True:
+                return 1
+            # bearish
+            elif self.open.iat[idx] > df["SBO_Level"] \
+            and df["SBO"] == 2 \
+            and df["Bear_BBR_C1"]:
+                return -1
+            else:
+                return 0
+        else:
+            return 0
+        
+    # Breakout Strategy
+        # Market order at close
+        # Stop beyond the extreme of breakout candle
+        # exit when price closes back into SMA8
+        # exit if breakout turns into bollinger band reversal
+        # exit if price closes back into session level
+        # If entering breakout on pullback, then target is 61.8 fib
+
+    # Session Break Strategy
+        # limit order at previous session high if trend is down
+        # limit order at previous low if trend is up
+        # target
+        # if session level if far away, could use "candle range breakout" setup instead
+        # bollinger band reversal more likely after level break that is not a valid breakout
